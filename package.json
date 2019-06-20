@@ -17,6 +17,7 @@
     "typescript": "^3.5.2"
   },
   "dependencies": {
+    "delay": "^4.3.0",
     "lodash": "^4.17.11",
     "tslib": "^1.10.0"
   }
