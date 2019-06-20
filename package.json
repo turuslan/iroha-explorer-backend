@@ -7,12 +7,14 @@
     "watch": "tsc --watch"
   },
   "devDependencies": {
+    "@types/lodash": "^4.14.134",
     "@types/node": "^12.0.8",
     "tslint": "^5.17.0",
     "tslint-config-airbnb": "^5.11.1",
     "typescript": "^3.5.2"
   },
   "dependencies": {
+    "lodash": "^4.17.11",
     "tslib": "^1.10.0"
   }
 }
