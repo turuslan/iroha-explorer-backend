@@ -25,26 +25,70 @@ export class IrohaApi {
     this.queryService = new QueryService_v1Client(this.host, grpc.credentials.createInsecure() as any);
   }
 
-  public async scanBlocks(firstHeight: number, onBlock: (block: Block) => Promise<any>) {
+  public streamBlocks(firstHeight: number, onBlock: (block: Block) => Promise<any>) {
     let height = firstHeight;
-    let block: Block;
-    while (true) {
-      try {
-        block = await this.getBlock(height);
-      } catch (e) {
-        const { errorResponse } = e as WithErrorResponse;
-        /** GetBlock returns same error code for invalid signatures and invalid height errors */
-        if (errorResponse && errorResponse.getReason() === ErrorResponse.Reason.STATEFUL_INVALID && errorResponse.getErrorCode() === 3 && errorResponse.getMessage() !== 'query signatories did not pass validation') {
-          break;
+    let end = false;
+    let result = null;
+    let onBlockLock = true;
+    const streamQueue: Block[] = [];
+    const stream = this.fetchCommits((block) => {
+      streamQueue.push(block);
+      return streamTryConsume();
+    });
+    async function streamTryConsume() {
+      if (!onBlockLock) {
+        onBlockLock = true;
+        try {
+          while (streamQueue.length) {
+            const block = streamQueue.shift();
+            if (end) {
+              return;
+            }
+            if (blockHeight(block) === height) {
+              await onBlock(block);
+              height += 1;
+            }
+          }
+          onBlockLock = false;
+        } catch (error) {
+          result = error;
+          stream.end();
         }
-        throw e;
       }
-      await onBlock(block);
-      height += 1;
     }
+    return {
+      promise: Promise.all([
+        (async () => {
+          try {
+            while (true) {
+              const block = await this.getBlock(height);
+              if (end || block === null || streamQueue.length && blockHeight(streamQueue[0]) <= height) {
+                break;
+              }
+              await onBlock(block);
+              height += 1;
+            }
+            onBlockLock = false;
+          } catch (error) {
+            result = error;
+            stream.end();
+            return;
+          }
+          if (!end) {
+            await streamTryConsume();
+          }
+        })(),
+        stream.promise,
+      ]).then(() => result && Promise.reject(result)),
+      end() {
+        end = true;
+        stream.end();
+      },
+    };
   }
 
-  public fetchCommit(onBlock: (block: Block) => void) {
+  public fetchCommits(onBlock: (block: Block) => void) {
+    let end = false;
     const query = this.prepareQuery(queryHelper.emptyBlocksQuery());
     const stream = this.queryService.fetchCommits(query);
     const promise = new Promise<void>((resolve, reject) => {
@@ -59,7 +103,7 @@ export class IrohaApi {
         if (response.hasBlockErrorResponse()) {
           /** currently BlockErrorResponse contains only message */
           reject(new Error(response.getBlockErrorResponse().getMessage()));
-        } else {
+        } else if (!end) {
           onBlock(response.getBlockResponse().getBlock());
         }
       });
@@ -67,12 +111,13 @@ export class IrohaApi {
     return {
       promise,
       end () {
+        end = true;
         stream.cancel();
       },
     };
   }
 
-  private getBlock(height: number) {
+  public getBlock(height: number) {
     return new Promise<Block>((resolve, reject) => {
       const query = this.prepareQuery(queryHelper.addQuery(
         queryHelper.emptyQuery(),
@@ -84,10 +129,15 @@ export class IrohaApi {
           reject(err);
         } else {
           if (response.hasErrorResponse()) {
-            const error = new Error() as WithErrorResponse;
-            error.errorResponse = response.getErrorResponse();
-            error.message = error.errorResponse.getMessage();
-            reject(error);
+            const errorResponse = response.getErrorResponse();
+            if (errorResponse.getReason() === ErrorResponse.Reason.STATEFUL_INVALID && errorResponse.getErrorCode() === 3 && errorResponse.getMessage() !== 'query signatories did not pass validation') {
+              resolve(null);
+            } else {
+              const error = new Error() as WithErrorResponse;
+              error.errorResponse = errorResponse;
+              error.message = error.errorResponse.getMessage();
+              reject(error);
+            }
           } else {
             resolve(response.getBlockResponse().getBlock());
           }
