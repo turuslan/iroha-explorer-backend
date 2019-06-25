@@ -2,7 +2,7 @@
   "block_store_path" : "/opt/iroha_data/blocks",
   "torii_port" : 50051,
   "internal_port" : 10001,
-  "pg_opt" : "host=postgres port=5432 user=postgres password=iroha-explorer-backend",
+  "pg_opt" : "host=iroha-explorer-iroha-postgres port=5432 user=postgres password=iroha-explorer-backend",
   "max_proposal_size" : 1000,
   "proposal_delay" : 1000,
   "vote_delay" : 1000,

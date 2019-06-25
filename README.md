@@ -21,3 +21,14 @@ Integration of Hyperledger Iroha into Hyperledger Explorer tool
 ## Watch
 
     npm run watch
+
+## Start docker compose
+Run this command to start Postgres and Iroha.
+Iroha may exit unexpectedly when started first time because of Postgres initialization, in that case just repeat command.
+
+    docker-compose -f docker/docker-compose up
+
+## Drop Postgres and Iroha
+You can use this command to drop Postgres database and Iroha blockchain.
+
+    docker rm iroha-explorer-iroha iroha-explorer-backend-postgres

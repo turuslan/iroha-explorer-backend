@@ -10,7 +10,7 @@ export class IrohaContainer {
     container.withEnv('KEY', 'node');
     const postgres = await PostgresContainer.create('iroha-explorer-backend');
     try {
-      const instance = await startWithLinks(container, { postgres: postgres.instance });
+      const instance = await startWithLinks(container, { 'iroha-explorer-iroha-postgres': postgres.instance });
       try {
         const host = `${await inspectIp(instance)}:50051`;
         await waitOn({ resources: [`tcp:${host}`] });
