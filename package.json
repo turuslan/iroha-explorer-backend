@@ -2,6 +2,9 @@
   "name": "iroha-explorer-backend",
   "private": true,
   "scripts": {
+    "start:init": "node out/init.js",
+    "start:sync": "node out/sync.js",
+    "start:info": "node out/info.js",
     "compile": "tsc",
     "lint": "tslint --project .",
     "test": "jest --verbose",
