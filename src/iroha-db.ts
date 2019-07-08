@@ -136,7 +136,7 @@ export class IrohaDb {
     `).then(map(parseBlock));
     return {
       items,
-      nextAfter: after + query.count,
+      nextAfter: after + items.length,
     } as PagedList<BlockProto, number>;
   }
 
@@ -150,7 +150,7 @@ export class IrohaDb {
     `).then(map(parseTransaction));
     return {
       items,
-      nextAfter: after + query.count,
+      nextAfter: after + items.length,
     } as PagedList<Transaction, number>;
   }
 
@@ -164,7 +164,7 @@ export class IrohaDb {
     `);
     return {
       items,
-      nextAfter: after + query.count,
+      nextAfter: after + items.length,
     } as PagedList<Account, number>;
   }
 

@@ -66,6 +66,7 @@ describe('iroha db', () => {
   let blocks: BlockProto[] = null;
   let transactions: TransactionProto[] = null;
   let accounts: {[id: string]: number} = null;
+  let pagedListAfterLast: number = null;
 
   async function addBlock(createdTime: string, blockTransactions: Transaction[]) {
     const block = makeBlock(blocks.length + 1, createdTime, blockTransactions);
@@ -129,6 +130,15 @@ describe('iroha db', () => {
     await checkAccount(account1);
   });
 
+  test('paged list after last', async () => {
+    const list1 = await db.accountList({ after: null, count: 1 });
+    expect(list1.items).toHaveLength(1);
+    const list2 = await db.accountList({ after: list1.nextAfter, count: 1 });
+    expect(list2.items).toHaveLength(0);
+    pagedListAfterLast = list2.nextAfter;
+    expect(list2.nextAfter).toBe(list1.nextAfter);
+  });
+
   test('add second block', async () => {
     await addBlock('2019-01-01T11:57Z', [
       transaction([
@@ -140,6 +150,11 @@ describe('iroha db', () => {
     ]);
     accounts[account1] = 3;
     accounts[account2] = 1;
+  });
+
+  test('paged list after last inserted', async () => {
+    const list2 = await db.accountList({ after: pagedListAfterLast, count: 1 });
+    expect(list2.items).toHaveLength(1);
   });
 
   test('two blocks', async () => {
