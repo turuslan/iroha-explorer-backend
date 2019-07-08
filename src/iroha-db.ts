@@ -1,6 +1,5 @@
-import { readFileSync } from 'fs';
-import * as path from 'path';
 import { DatabasePoolType, sql } from 'slonik';
+import { postgresSql as initSql } from './files';
 import { BlockProto, transactionHash, TransactionProto } from './iroha-api';
 
 type First<T> = { value: T };
@@ -25,8 +24,6 @@ const parseBlock = protobuf => BlockProto.deserializeBinary(new Uint8Array(proto
 const parseTransaction = ({ protobuf }) => ({
   protobuf: TransactionProto.deserializeBinary(new Uint8Array(protobuf)),
 }) as Transaction;
-
-const initSql = readFileSync(path.resolve(__dirname, '../postgres.sql')).toString();
 
 const bytesValue = (value: Uint8Array) => sql.raw('$1', [Buffer.from(value) as any]);
 const dateValue = (value: number) => new Date(value).toISOString();
