@@ -43,6 +43,11 @@ Prints information from database to console.
 
     npm run start:info
 
+## Start GraphQL server
+Go to http://localhost:4000 in browser to access GraphiQL IDE.
+
+    npm run start:server
+
 ## Drop Postgres and Iroha
 You can use this command to drop Postgres database and Iroha blockchain.
 
