@@ -1,86 +1,23 @@
-import { Block, Block_v1 } from 'iroha-helpers/lib/proto/block_pb';
-import { Command, CreateAccount, SetAccountQuorum } from 'iroha-helpers/lib/proto/commands_pb';
-import { Transaction } from 'iroha-helpers/lib/proto/transaction_pb';
 import { createPool, DatabasePoolType, sql } from 'slonik';
-import { blockHash, blockHeight, BlockProto, transactionHash, TransactionProto } from '../iroha-api';
+import { blockHash, blockHeight, transactionHash } from '../iroha-api';
 import { IrohaDb } from '../iroha-db';
+import { account1, account2, Step, steps } from './util/iroha-data';
 import { PostgresContainer } from './util/postgres-container';
-
-const account1 = 'alice@explorer';
-const account2 = 'bob@explorer';
-const account3 = 'eve@explorer';
-
-function makeBlock(height: number, createdTime: string, transactions: Transaction[]) {
-  const payload = new Block_v1.Payload();
-  payload.setHeight(height);
-  payload.setCreatedTime(new Date(createdTime).getTime());
-  payload.setTransactionsList(transactions);
-
-  const blockV1 = new Block_v1();
-  blockV1.setPayload(payload);
-
-  const block = new Block();
-  block.setBlockV1(blockV1);
-
-  return block;
-}
-
-function transaction(commands: Command[]) {
-  const reducedPayload = new Transaction.Payload.ReducedPayload();
-  reducedPayload.setCommandsList(commands);
-
-  const payload = new Transaction.Payload();
-  payload.setReducedPayload(reducedPayload);
-
-  const transaction = new Transaction();
-  transaction.setPayload(payload);
-  return transaction;
-}
-
-function createAccount(id: string) {
-  const createAccount = new CreateAccount();
-  const [name, domain] = id.split('@');
-  createAccount.setAccountName(name);
-  createAccount.setDomainId(domain);
-
-  const command = new Command();
-  command.setCreateAccount(createAccount);
-  return command;
-}
-
-function setAccountQuorum(accountId: string, quorum: number) {
-  const setAccountQuorum = new SetAccountQuorum();
-  setAccountQuorum.setQuorum(quorum);
-  setAccountQuorum.setAccountId(accountId);
-
-  const command = new Command();
-  command.setSetAccountQuorum(setAccountQuorum);
-  return command;
-}
 
 describe('iroha db', () => {
   let postgres: PostgresContainer = null;
   let pool: DatabasePoolType = null;
   let db: IrohaDb = null;
 
-  let blocks: BlockProto[] = null;
-  let transactions: TransactionProto[] = null;
-  let accounts: {[id: string]: number} = null;
+  let step: Step = null;
   let pagedListAfterLast: number = null;
-
-  async function addBlock(createdTime: string, blockTransactions: Transaction[]) {
-    const block = makeBlock(blocks.length + 1, createdTime, blockTransactions);
-    await db.applyBlock(block);
-    blocks.push(block);
-    transactions = transactions.concat(blockTransactions);
-  }
 
   async function checkAccount(id: string) {
     const account = await db.accountById(id);
-    if (id in accounts) {
+    if (id in step.accountQuorum) {
       expect(account).not.toBeNull();
       expect(account.id).toBe(id);
-      expect(account.quorum).toBe(accounts[id]);
+      expect(account.quorum).toBe(step.accountQuorum[id]);
     } else {
       expect(account).toBeNull();
     }
@@ -93,10 +30,6 @@ describe('iroha db', () => {
       pool = createPool(postgres.url.href);
       await IrohaDb.init(pool);
       db = new IrohaDb(pool);
-
-      blocks = [];
-      transactions = [];
-      accounts = {};
     },
     60000,
   );
@@ -114,12 +47,8 @@ describe('iroha db', () => {
   });
 
   test('add first block', async () => {
-    await addBlock('2019-01-01T09:00Z', [
-      transaction([
-        createAccount(account1),
-      ]),
-    ]);
-    accounts[account1] = 1;
+    step = steps[0];
+    await db.applyBlock(step.block);
   });
 
   test('one block', async () => {
@@ -140,16 +69,8 @@ describe('iroha db', () => {
   });
 
   test('add second block', async () => {
-    await addBlock('2019-01-01T11:57Z', [
-      transaction([
-        createAccount(account2),
-      ]),
-      transaction([
-        setAccountQuorum(account1, 3),
-      ]),
-    ]);
-    accounts[account1] = 3;
-    accounts[account2] = 1;
+    step = steps[1];
+    await db.applyBlock(step.block);
   });
 
   test('paged list after last inserted', async () => {
@@ -167,7 +88,7 @@ describe('iroha db', () => {
   });
 
   test('block by height', async () => {
-    for (const expected of blocks) {
+    for (const expected of step.blocks) {
       const actual = await db.blockByHeight(blockHeight(expected));
       expect(actual).not.toBeNull();
       expect(blockHash(actual)).toBe(blockHash(expected));
@@ -175,7 +96,7 @@ describe('iroha db', () => {
   });
 
   test('transaction by hash', async () => {
-    for (const hash of transactions.map(transactionHash)) {
+    for (const hash of step.transactions.map(transactionHash)) {
       const transaction = await db.transactionByHash(hash);
       expect(transaction).not.toBeNull();
       expect(transactionHash(transaction.protobuf)).toBe(hash);
@@ -183,12 +104,8 @@ describe('iroha db', () => {
   });
 
   test('add third block', async () => {
-    await addBlock('2019-01-01T11:59Z', [
-      transaction([
-        createAccount(account3),
-      ]),
-    ]);
-    accounts[account3] = 1;
+    step = steps[2];
+    await db.applyBlock(step.block);
   });
 
   test('block list', async () => {
@@ -207,16 +124,16 @@ describe('iroha db', () => {
   test('trasaction list', async () => {
     const transactions1 = await db.transactionList({ after: null, count: 1 });
     expect(transactions1.items).toHaveLength(1);
-    expect(transactionHash(transactions1.items[0].protobuf)).toBe(transactionHash(transactions[0]));
+    expect(transactionHash(transactions1.items[0].protobuf)).toBe(transactionHash(step.transactions[0]));
 
     const transactions23 = await db.transactionList({ after: transactions1.nextAfter, count: 2 });
     expect(transactions23.items).toHaveLength(2);
-    expect(transactionHash(transactions23.items[0].protobuf)).toBe(transactionHash(transactions[1]));
-    expect(transactionHash(transactions23.items[1].protobuf)).toBe(transactionHash(transactions[2]));
+    expect(transactionHash(transactions23.items[0].protobuf)).toBe(transactionHash(step.transactions[1]));
+    expect(transactionHash(transactions23.items[1].protobuf)).toBe(transactionHash(step.transactions[2]));
   });
 
   test('account list', async () => {
-    const accountSet = new Set(Object.keys(accounts));
+    const accountSet = new Set(Object.keys(step.accountQuorum));
     const accounts1 = await db.accountList({ after: null, count:1 });
     expect(accounts1.items).toHaveLength(1);
     expect(accountSet.delete(accounts1.items[0].id)).toBe(true);
