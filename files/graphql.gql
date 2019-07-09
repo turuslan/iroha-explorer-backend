@@ -1,0 +1,45 @@
+
+type Block {
+  height: Int!
+  hash: String!
+  transactionCount: Int!
+}
+
+type BlockList {
+  items: [Block!]!
+  nextAfter: Int!
+}
+
+type Transaction {
+  hash: String!
+  createdBy: Account!
+}
+
+type TransactionList {
+  items: [Transaction!]!
+  nextAfter: Int!
+}
+
+type Account {
+  id: String!
+  quorum: Int!
+}
+
+type AccountList {
+  items: [Account!]!
+  nextAfter: Int!
+}
+
+type Query {
+  blockCount: Int!
+  transactionCount: Int!
+  accountCount: Int!
+
+  blockByHeight(height: Int!): Block
+  transactionByHash(hash: String!): Transaction
+  accountById(id: String!): Account
+
+  blockList(after: Int, count: Int!): BlockList!
+  transactionList(after: Int, count: Int!): TransactionList!
+  accountList(after: Int, count: Int!): AccountList!
+}
