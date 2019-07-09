@@ -17,9 +17,10 @@ export function makeBlock(height: number, createdTime: string, transactions: Tra
   return block;
 }
 
-function transaction(commands: Command[]) {
+function transaction(creatorAccountId: string, commands: Command[]) {
   const reducedPayload = new Transaction.Payload.ReducedPayload();
   reducedPayload.setCommandsList(commands);
+  reducedPayload.setCreatorAccountId(creatorAccountId);
 
   const payload = new Transaction.Payload();
   payload.setReducedPayload(reducedPayload);
@@ -89,20 +90,20 @@ export const account2 = 'bob@explorer';
 export const account3 = 'eve@explorer';
 
 addStep('2019-01-01T09:00Z', [
-  transaction([
+  transaction(account1, [
     createAccount(account1),
   ]),
 ]);
 addStep('2019-01-01T11:57Z', [
-  transaction([
+  transaction(account1, [
     createAccount(account2),
   ]),
-  transaction([
+  transaction(account2, [
     setAccountQuorum(account1, 3),
   ]),
 ]);
 addStep('2019-01-01T11:59Z', [
-  transaction([
+  transaction(account2, [
     createAccount(account3),
   ]),
 ]);
