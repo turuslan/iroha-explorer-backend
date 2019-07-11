@@ -8,7 +8,7 @@ Integration of Hyperledger Iroha into Hyperledger Explorer tool
 
 ## Build
 
-    npm run compile
+    npm run build
 
 ## Lint
 
@@ -45,6 +45,7 @@ Prints information from database to console.
 
 ## Start GraphQL server
 Go to http://localhost:4000 in browser to access GraphiQL IDE.
+Go to http://localhost:4000/doc to access static documentation pages.
 
     npm run start:server
 

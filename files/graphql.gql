@@ -1,45 +1,86 @@
 
+# Iroha block
 type Block {
+  # Block height
   height: Int!
+
+  # Block hash, SHA3-256
   hash: String!
+
+  # Count of transactions in block
   transactionCount: Int!
 }
 
+# Paginated list of blocks
 type BlockList {
+  # Blocks in this page
   items: [Block!]!
+
+  # Next page "after" input
   nextAfter: Int!
 }
 
+# Iroha transaction
 type Transaction {
+  # Transaction hash, SHA3-256
   hash: String!
+
+  # Transaction creator account
   createdBy: Account!
 }
 
+# Paginated list of transactions
 type TransactionList {
+  # Transactions in this page
   items: [Transaction!]!
+
+  # Next page "after" input
   nextAfter: Int!
 }
 
+# Iroha account
 type Account {
+  # Account id, in "NAME@DOMAIN" format
   id: String!
+
+  # Account quorum
   quorum: Int!
 }
 
+# Paginated list of accounts
 type AccountList {
+  # Accounts in this page
   items: [Account!]!
+
+  # Next page "after" input
   nextAfter: Int!
 }
 
 type Query {
+  # Total block count
   blockCount: Int!
+
+  # Total transaction count
   transactionCount: Int!
+
+  # Total account count
   accountCount: Int!
 
+  # Block by height, or null if does not exist
   blockByHeight(height: Int!): Block
+
+  # Transaction by hash, or null if does not exist
   transactionByHash(hash: String!): Transaction
+
+  # Account by id, or null if does not exist
   accountById(id: String!): Account
 
+  # Chronological paginated list of blocks
   blockList(after: Int, count: Int!): BlockList!
+
+  # Chronological paginated list of transactions
   transactionList(after: Int, count: Int!): TransactionList!
+
+  # Chronological paginated list of accounts
   accountList(after: Int, count: Int!): AccountList!
 }
