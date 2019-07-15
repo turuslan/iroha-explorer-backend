@@ -13,16 +13,16 @@ export const schema = makeExecutableSchema<IrohaDb>({
     },
     Transaction: {
       hash: (transaction: Transaction) => transactionHash(transaction.protobuf),
-      createdBy: (transaction: Transaction, {}, db) => db.accountById(transaction.protobuf.getPayload().getReducedPayload().getCreatorAccountId()),
+      createdBy: (transaction: Transaction, {}, { accountLoader }) => accountLoader.load(transaction.protobuf.getPayload().getReducedPayload().getCreatorAccountId()),
     },
     Query: {
       blockCount: (_, {}, db) => db.blockCount(),
       transactionCount: (_, {}, db) => db.transactionCount(),
       accountCount: (_, {}, db) => db.accountCount(),
 
-      blockByHeight: (_, { height }, db) => db.blockByHeight(height),
-      transactionByHash: (_, { hash }, db) => db.transactionByHash(hash),
-      accountById: (_, { id }, db) => db.accountById(id),
+      blockByHeight: (_, { height }, { blockLoader }) => blockLoader.load(height),
+      transactionByHash: (_, { hash }, { transactionLoader }) => transactionLoader.load(hash),
+      accountById: (_, { id }, { accountLoader }) => accountLoader.load(id),
 
       blockList: (_, { after, count }, db) => db.blockList({ after, count }),
       transactionList: (_, { after, count }, db) => db.transactionList({ after, count }),

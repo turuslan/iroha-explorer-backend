@@ -1,14 +1,24 @@
+import autobind from 'autobind-decorator';
+import DataLoader = require('dataloader');
+import * as lodash from 'lodash';
 import { DatabasePoolType, sql } from 'slonik';
 import { postgresSql as initSql } from './files';
-import { BlockProto, transactionHash, TransactionProto } from './iroha-api';
+import { blockHeight, BlockProto, transactionHash, TransactionProto } from './iroha-api';
 
 type First<T> = { value: T };
 
 type PagedQuery<A> = { after: A, count: number };
 type PagedList<T, A> = { items: T[], nextAfter: A };
 
-const nullable = <A, B>(f: (x: A) => B) => (x: A) => x === null ? null : f(x);
+const array = (items: any[], type: string) => sql.raw(`$1::${type}[]`, [items as any]);
+const anyOrOne = (items: any[], type: string) => items.length === 1 ? sql`(${items[0]})` : sql`ANY(${array(items, type)})`;
+
 const map = <A, B>(f: (x: A) => B) => (xs: A[]) => xs.map(f);
+
+const byKeys = <T, K extends number | string>(keyOf: (x: T) => K, keys: K[]) => (items: T[]) => {
+  const lookup = lodash.keyBy(items, keyOf);
+  return keys.map<T>(key => lodash.get(lookup, key, null));
+};
 
 export interface Account {
   id: string;
@@ -29,6 +39,10 @@ const bytesValue = (value: Uint8Array) => sql.raw('$1', [Buffer.from(value) as a
 const dateValue = (value: number) => new Date(value).toISOString();
 
 export class IrohaDb {
+  public blockLoader: DataLoader<number, BlockProto>;
+  public transactionLoader: DataLoader<string, Transaction>;
+  public accountLoader: DataLoader<string, Account>;
+
   public static init(pool: DatabasePoolType) {
     return pool.query(sql`${sql.raw(initSql)}`);
   }
@@ -36,6 +50,14 @@ export class IrohaDb {
   public constructor(
     private pool: DatabasePoolType,
   ) {
+    this.blockLoader = new DataLoader(this.blocksByHeight);
+    this.transactionLoader = new DataLoader(this.transactionsByHash);
+    this.accountLoader = new DataLoader(this.accountsById);
+  }
+
+  @autobind
+  public fork() {
+    return new IrohaDb(this.pool);
   }
 
   public applyBlock(block: BlockProto) {
@@ -105,25 +127,28 @@ export class IrohaDb {
     `);
   }
 
-  public blockByHeight(height: number) {
-    return this.pool.maybeOneFirst(sql`
+  @autobind
+  public blocksByHeight(heights: number[]) {
+    return this.pool.anyFirst(sql`
       SELECT protobuf FROM block
-      WHERE height = ${height}
-    `).then(nullable(parseBlock));
+      WHERE height = ${anyOrOne(heights, 'BIGINT')}
+    `).then(map(parseBlock)).then(byKeys(blockHeight, heights));
   }
 
-  public transactionByHash(hash: string) {
-    return this.pool.maybeOne<any>(sql`
+  @autobind
+  public transactionsByHash(hashes: string[]) {
+    return this.pool.any<any>(sql`
       SELECT protobuf FROM transaction
-      WHERE hash = ${hash}
-    `).then(nullable(parseTransaction));
+      WHERE hash = ${anyOrOne(hashes, 'TEXT')}
+    `).then(map(parseTransaction)).then(byKeys(x => transactionHash(x.protobuf), hashes));
   }
 
-  public accountById(id: string) {
-    return this.pool.maybeOne<Account>(sql`
+  @autobind
+  public accountsById(ids: string[]) {
+    return this.pool.any<Account>(sql`
       SELECT id, quorum FROM account
-      WHERE id = ${id}
-    `);
+      WHERE id = ${anyOrOne(ids, 'TEXT')}
+    `).then(byKeys(x => x.id, ids));
   }
 
   public async blockList(query: PagedQuery<number>) {

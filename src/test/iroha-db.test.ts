@@ -13,13 +13,14 @@ describe('iroha db', () => {
   let pagedListAfterLast: number = null;
 
   async function checkAccount(id: string) {
-    const account = await db.accountById(id);
+    const accounts = await db.accountsById([id]);
+    expect(accounts).toHaveLength(1);
     if (id in step.accountQuorum) {
-      expect(account).not.toBeNull();
-      expect(account.id).toBe(id);
-      expect(account.quorum).toBe(step.accountQuorum[id]);
+      expect(accounts[0]).not.toBeNull();
+      expect(accounts[0].id).toBe(id);
+      expect(accounts[0].quorum).toBe(step.accountQuorum[id]);
     } else {
-      expect(account).toBeNull();
+      expect(accounts[0]).toBeNull();
     }
   }
 
@@ -88,19 +89,27 @@ describe('iroha db', () => {
   });
 
   test('block by height', async () => {
+    expect(await db.blocksByHeight([100, 100])).toEqual([null, null]);
     for (const expected of step.blocks) {
-      const actual = await db.blockByHeight(blockHeight(expected));
-      expect(actual).not.toBeNull();
-      expect(blockHash(actual)).toBe(blockHash(expected));
+      const blocks = await db.blocksByHeight([blockHeight(expected)]);
+      expect(blocks).toHaveLength(1);
+      expect(blocks[0]).not.toBeNull();
+      expect(blockHash(blocks[0])).toBe(blockHash(expected));
     }
   });
 
   test('transaction by hash', async () => {
+    expect(await db.transactionsByHash(['', ''])).toEqual([null, null]);
     for (const hash of step.transactions.map(transactionHash)) {
-      const transaction = await db.transactionByHash(hash);
-      expect(transaction).not.toBeNull();
-      expect(transactionHash(transaction.protobuf)).toBe(hash);
+      const transactions = await db.transactionsByHash([hash]);
+      expect(transactions).toHaveLength(1);
+      expect(transactions[0]).not.toBeNull();
+      expect(transactionHash(transactions[0].protobuf)).toBe(hash);
     }
+  });
+
+  test('account by id', async () => {
+    expect(await db.accountsById(['', ''])).toEqual([null, null]);
   });
 
   test('add third block', async () => {

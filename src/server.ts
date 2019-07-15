@@ -8,7 +8,7 @@ import { IrohaDb } from './iroha-db';
 
 const db = new IrohaDb(createPool(config.postgres));
 
-const server = new GraphQLServer({ schema, context: db });
+const server = new GraphQLServer({ schema, context: db.fork });
 server.get('/', (_, res) => res.end(graphiqlHtml));
 server.use('/doc', serveStatic(docPath));
 

@@ -32,6 +32,8 @@
   },
   "dependencies": {
     "@babel/polyfill": "^7.4.4",
+    "autobind-decorator": "^2.4.0",
+    "dataloader": "^1.4.0",
     "delay": "^4.3.0",
     "graphql-yoga": "^1.18.0",
     "grpc": "^1.21.1",
