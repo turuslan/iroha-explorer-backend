@@ -27,6 +27,9 @@ export const schema = makeExecutableSchema<IrohaDb>({
       blockList: (_, { after, count }, db) => db.blockList({ after, count }),
       transactionList: (_, { after, count }, db) => db.transactionList({ after, count }),
       accountList: (_, { after, count }, db) => db.accountList({ after, count }),
+
+      transactionCountPerMinute: (_, { count }, db) => db.transactionCountPerMinute(count),
+      transactionCountPerHour: (_, { count }, db) => db.transactionCountPerHour(count),
     },
   },
 });

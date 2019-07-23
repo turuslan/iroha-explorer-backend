@@ -83,4 +83,10 @@ type Query {
 
   # Chronological paginated list of accounts
   accountList(after: Int, count: Int!): AccountList!
+
+  # Histogram of transactions per minute
+  transactionCountPerMinute(count: Int!): [Int!]!
+
+  # Histogram of transactions per hour
+  transactionCountPerHour(count: Int!): [Int!]!
 }
