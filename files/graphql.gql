@@ -9,6 +9,9 @@ type Block {
 
   # Count of transactions in block
   transactionCount: Int!
+
+  # Block commit time, ISO format
+  time: String!
 }
 
 # Paginated list of blocks
