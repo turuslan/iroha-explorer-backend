@@ -30,6 +30,8 @@ export const schema = makeExecutableSchema<IrohaDb>({
 
       transactionCountPerMinute: (_, { count }, db) => db.transactionCountPerMinute(count),
       transactionCountPerHour: (_, { count }, db) => db.transactionCountPerHour(count),
+      blockCountPerMinute: (_, { count }, db) => db.blockCountPerMinute(count),
+      blockCountPerHour: (_, { count }, db) => db.blockCountPerHour(count),
     },
   },
 });

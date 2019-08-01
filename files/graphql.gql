@@ -89,4 +89,10 @@ type Query {
 
   # Histogram of transactions per hour
   transactionCountPerHour(count: Int!): [Int!]!
+
+  # Histogram of blocks per minute
+  blockCountPerMinute(count: Int!): [Int!]!
+
+  # Histogram of blocks per hour
+  blockCountPerHour(count: Int!): [Int!]!
 }

@@ -194,16 +194,24 @@ export class IrohaDb {
   }
 
   public transactionCountPerMinute(count: number) {
-    return this.pool.anyFirst<First<number>>(this.transactionCountPerBucket('minute', count));
+    return this.countPerBucket('transaction', 'minute', count);
   }
 
   public transactionCountPerHour(count: number) {
-    return this.pool.anyFirst<First<number>>(this.transactionCountPerBucket('hour', count));
+    return this.countPerBucket('transaction', 'hour', count);
   }
 
-  private transactionCountPerBucket(unit: 'minute' | 'hour', count: number) {
+  public blockCountPerMinute(count: number) {
+    return this.countPerBucket('block', 'minute', count);
+  }
+
+  public blockCountPerHour(count: number) {
+    return this.countPerBucket('block', 'hour', count);
+  }
+
+  private countPerBucket(what: 'block' | 'transaction', unit: 'minute' | 'hour', count: number) {
     const after = sql`DATE_TRUNC(${unit}, NOW()) - ${`${count - 1} ${unit}`}::INTERVAL`;
-    return sql`
+    return this.pool.anyFirst<First<number>>(sql`
       WITH buckets AS (
         SELECT generate_series(
           ${after},
@@ -211,11 +219,11 @@ export class IrohaDb {
           ${`1 ${unit}`}::INTERVAL
         ) AS bucket
       )
-      SELECT COALESCE(SUM(transaction_count), 0)
+      SELECT ${what === 'block' ? sql`COUNT(block.*)` : sql`COALESCE(SUM(transaction_count), 0)`}
       FROM buckets LEFT JOIN block ON DATE_TRUNC(${unit}, created_time) = bucket
         AND created_time > ${after}
       GROUP BY bucket
       ORDER BY bucket
-    `;
+    `);
   }
 }
