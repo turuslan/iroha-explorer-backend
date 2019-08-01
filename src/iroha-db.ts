@@ -29,6 +29,11 @@ export interface Transaction {
   protobuf: TransactionProto;
 }
 
+export interface Peer {
+  address: string;
+  public_key: string;
+}
+
 const parseBlock = protobuf => BlockProto.deserializeBinary(new Uint8Array(protobuf));
 
 const parseTransaction = ({ protobuf }) => ({
@@ -42,6 +47,7 @@ export class IrohaDb {
   public blockLoader: DataLoader<number, BlockProto>;
   public transactionLoader: DataLoader<string, Transaction>;
   public accountLoader: DataLoader<string, Account>;
+  public peerLoader: DataLoader<string, Peer>;
 
   public static init(pool: DatabasePoolType) {
     return pool.query(sql`${sql.raw(initSql)}`);
@@ -53,6 +59,7 @@ export class IrohaDb {
     this.blockLoader = new DataLoader(this.blocksByHeight);
     this.transactionLoader = new DataLoader(this.transactionsByHash);
     this.accountLoader = new DataLoader(this.accountsById);
+    this.peerLoader = new DataLoader(this.peersByPublicKey);
   }
 
   @autobind
@@ -75,6 +82,7 @@ export class IrohaDb {
 
       let transactionIndex = await this.transactionCount();
       let accountIndex = await this.accountCount();
+      let peerIndex = await this.peerCount();
 
       for (const transaction of blockTransactions) {
         transactionIndex += 1;
@@ -103,6 +111,16 @@ export class IrohaDb {
               UPDATE account SET quorum = ${setAccountQuorum.getQuorum()}
               WHERE id = ${setAccountQuorum.getAccountId()}
             `);
+          } else if (command.hasAddPeer()) {
+            const addPeer = command.getAddPeer();
+            peerIndex += 1;
+            await this.pool.query(sql`
+              INSERT INTO peer (index, address, public_key) VALUES (
+                ${peerIndex},
+                ${addPeer.getPeer().getAddress()},
+                ${addPeer.getPeer().getPeerKey()}
+              )
+            `);
           }
         }
       }
@@ -124,6 +142,12 @@ export class IrohaDb {
   public accountCount() {
     return this.pool.oneFirst<First<number>>(sql`
       SELECT COUNT(1) FROM account
+    `);
+  }
+
+  public peerCount() {
+    return this.pool.oneFirst<First<number>>(sql`
+      SELECT COUNT(1) FROM peer
     `);
   }
 
@@ -149,6 +173,14 @@ export class IrohaDb {
       SELECT id, quorum FROM account
       WHERE id = ${anyOrOne(ids, 'TEXT')}
     `).then(byKeys(x => x.id, ids));
+  }
+
+  @autobind
+  public peersByPublicKey(publicKeys: string[]) {
+    return this.pool.any<Peer>(sql`
+      SELECT address, public_key FROM peer
+      WHERE public_key = ${anyOrOne(publicKeys, 'TEXT')}
+    `).then(byKeys(x => x.public_key, publicKeys));
   }
 
   public async blockList(query: PagedQuery<number>) {
@@ -191,6 +223,20 @@ export class IrohaDb {
       items,
       nextAfter: after + items.length,
     } as PagedList<Account, number>;
+  }
+
+  public async peerList(query: PagedQuery<number>) {
+    const after = query.after || 0;
+    const items = await this.pool.any<Peer>(sql`
+      SELECT address, public_key FROM peer
+      WHERE index > ${after}
+      ORDER BY index
+      LIMIT ${query.count}
+    `);
+    return {
+      items,
+      nextAfter: after + items.length,
+    } as PagedList<Peer, number>;
   }
 
   public transactionCountPerMinute(count: number) {

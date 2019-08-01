@@ -30,6 +30,13 @@ async function main() {
     write(`    quorum: ${account.quorum}`);
   }
 
+  const peerCount = await db.peerCount();
+  write(`peers (${peerCount}):`);
+  for (const peer of (await db.peerList({ after: null, count: peerCount })).items) {
+    write(`  peer ${peer.public_key}`);
+    write(`    address: ${peer.address}`);
+  }
+
   write(`transactions per minute: ${(await db.transactionCountPerMinute(5)).join(', ')}`);
   write(`transactions per hour: ${(await db.transactionCountPerHour(5)).join(', ')}`);
 }

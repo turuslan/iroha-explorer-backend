@@ -35,4 +35,16 @@ CREATE UNIQUE INDEX ON account(index);
 
 
 
+CREATE TABLE peer (
+  index INT NOT NULL,
+  address VARCHAR(261) NOT NULL,
+  public_key VARCHAR NOT NULL
+);
+
+CREATE UNIQUE INDEX ON peer(index);
+CREATE UNIQUE INDEX ON peer(address);
+CREATE UNIQUE INDEX ON peer(public_key);
+
+
+
 COMMIT;
