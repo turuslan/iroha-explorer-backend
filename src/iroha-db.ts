@@ -183,12 +183,12 @@ export class IrohaDb {
     `).then(byKeys(x => x.public_key, publicKeys));
   }
 
-  public async blockList(query: PagedQuery<number>) {
-    const after = query.after || 0;
+  public async blockList(query: PagedQuery<number>, reverse: boolean = false) {
+    const after = query.after || (reverse ? 0x7FFFFFFF : 0);
     const items = await this.pool.anyFirst(sql`
       SELECT protobuf FROM block
-      WHERE height > ${after}
-      ORDER BY height
+      WHERE height ${sql.raw(reverse ? '<' : '>')} ${after}
+      ORDER BY height ${sql.raw(reverse ? 'DESC' : 'ASC')}
       LIMIT ${query.count}
     `).then(map(parseBlock));
     return {

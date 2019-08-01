@@ -103,7 +103,7 @@ type Query {
   peerByPublicKey(publicKey: String!): Peer
 
   # Chronological paginated list of blocks
-  blockList(after: Int, count: Int!): BlockList!
+  blockList(after: Int, count: Int!, reverse: Boolean): BlockList!
 
   # Chronological paginated list of transactions
   transactionList(after: Int, count: Int!): TransactionList!

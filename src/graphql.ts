@@ -30,7 +30,7 @@ export const schema = makeExecutableSchema<IrohaDb>({
       accountById: (_, { id }, { accountLoader }) => accountLoader.load(id),
       peerByPublicKey: (_, { publicKey }, { peerLoader }) => peerLoader.load(publicKey),
 
-      blockList: (_, { after, count }, db) => db.blockList({ after, count }),
+      blockList: (_, { after, count, reverse }, db) => db.blockList({ after, count }, reverse),
       transactionList: (_, { after, count }, db) => db.transactionList({ after, count }),
       accountList: (_, { after, count }, db) => db.accountList({ after, count }),
       peerList: (_, { after, count }, db) => db.peerList({ after, count }),
