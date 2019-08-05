@@ -12,6 +12,7 @@ export const schema = makeExecutableSchema<IrohaDb>({
       transactionCount: (block: BlockProto) => block.getBlockV1().getPayload().getTransactionsList().length,
       time: (block: BlockProto) => new Date(block.getBlockV1().getPayload().getCreatedTime()).toISOString(),
       transactions: getBlockTransactions,
+      previousBlockHash: (block: BlockProto) => block.getBlockV1().getPayload().getPrevBlockHash(),
     },
     Transaction: {
       hash: (transaction: Transaction) => transactionHash(transaction.protobuf),

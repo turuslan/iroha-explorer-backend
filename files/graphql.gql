@@ -15,6 +15,9 @@ type Block {
 
   # Transactions in block
   transactions: [Transaction!]!
+
+  # Previous block hash
+  previousBlockHash: String!
 }
 
 # Paginated list of blocks
