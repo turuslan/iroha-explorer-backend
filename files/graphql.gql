@@ -12,6 +12,9 @@ type Block {
 
   # Block commit time, ISO format
   time: String!
+
+  # Transactions in block
+  transactions: [Transaction!]!
 }
 
 # Paginated list of blocks

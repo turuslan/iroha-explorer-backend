@@ -18,7 +18,8 @@ CREATE TABLE transaction (
   protobuf BYTEA NOT NULL,
   index BIGINT NOT NULL,
   hash CHAR(64) NOT NULL,
-  creator_domain VARCHAR(255) NOT NULL
+  creator_domain VARCHAR(255) NOT NULL,
+  block_height BIGINT NOT NULL
 );
 
 CREATE UNIQUE INDEX ON transaction(index);

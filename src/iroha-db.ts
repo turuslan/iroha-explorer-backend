@@ -34,6 +34,8 @@ export interface Peer {
   public_key: string;
 }
 
+export const getBlockTransactions = (block: BlockProto) => block.getBlockV1().getPayload().getTransactionsList().map<Transaction>(protobuf => ({ protobuf }));
+
 const parseBlock = protobuf => BlockProto.deserializeBinary(new Uint8Array(protobuf));
 
 const parseTransaction = ({ protobuf }) => ({
@@ -87,11 +89,12 @@ export class IrohaDb {
       for (const transaction of blockTransactions) {
         transactionIndex += 1;
         await this.pool.query(sql`
-          INSERT INTO transaction (protobuf, index, hash, creator_domain) VALUES (
+          INSERT INTO transaction (protobuf, index, hash, creator_domain, block_height) VALUES (
             ${bytesValue(transaction.serializeBinary())},
             ${transactionIndex},
             ${transactionHash(transaction)},
-            ${accountDomain(transaction.getPayload().getReducedPayload().getCreatorAccountId())}
+            ${accountDomain(transaction.getPayload().getReducedPayload().getCreatorAccountId())},
+            ${blockHeight(block)}
           )
         `);
 

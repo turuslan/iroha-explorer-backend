@@ -1,7 +1,7 @@
 import { makeExecutableSchema } from 'graphql-tools';
 import { graphqlGql } from './files';
 import { blockHash, blockHeight, BlockProto, transactionHash } from './iroha-api';
-import { IrohaDb, Peer, Transaction } from './iroha-db';
+import { getBlockTransactions, IrohaDb, Peer, Transaction } from './iroha-db';
 
 export const schema = makeExecutableSchema<IrohaDb>({
   typeDefs: graphqlGql,
@@ -11,6 +11,7 @@ export const schema = makeExecutableSchema<IrohaDb>({
       hash: blockHash,
       transactionCount: (block: BlockProto) => block.getBlockV1().getPayload().getTransactionsList().length,
       time: (block: BlockProto) => new Date(block.getBlockV1().getPayload().getCreatedTime()).toISOString(),
+      transactions: getBlockTransactions,
     },
     Transaction: {
       hash: (transaction: Transaction) => transactionHash(transaction.protobuf),
