@@ -39,6 +39,13 @@ async function main() {
 
   write(`transactions per minute: ${(await db.transactionCountPerMinute(5)).join(', ')}`);
   write(`transactions per hour: ${(await db.transactionCountPerHour(5)).join(', ')}`);
+
+  if (transactionCount) {
+    write('transactions per domain');
+    for (const { domain, count } of await db.transactionCountPerDomain()) {
+      write(`  domain ${domain}, ${count} transactions`);
+    }
+  }
 }
 
 if (module === require.main) {

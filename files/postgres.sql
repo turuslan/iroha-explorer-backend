@@ -17,7 +17,8 @@ CREATE UNIQUE INDEX ON block(height);
 CREATE TABLE transaction (
   protobuf BYTEA NOT NULL,
   index BIGINT NOT NULL,
-  hash CHAR(64) NOT NULL
+  hash CHAR(64) NOT NULL,
+  creator_domain VARCHAR(255) NOT NULL
 );
 
 CREATE UNIQUE INDEX ON transaction(index);

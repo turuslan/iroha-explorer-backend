@@ -159,3 +159,10 @@ export const blockHash = (block: Block) => sha3_256(block.getBlockV1().getPayloa
 export const blockHeight = (block: Block) => block.getBlockV1().getPayload().getHeight();
 
 export const transactionHash = (transaction: Transaction) => sha3_256(transaction.getPayload().serializeBinary());
+
+const ACCOUNT_REGEX = /^[^@]+@([^@]+)$/;
+
+export function accountDomain(accountId: string) {
+  const match = accountId.match(ACCOUNT_REGEX);
+  return match && match[1];
+}

@@ -77,6 +77,11 @@ type PeerList {
   nextAfter: Int!
 }
 
+type CountPerDomain {
+  domain: String!
+  count: Int!
+}
+
 type Query {
   # Total block count
   blockCount: Int!
@@ -125,4 +130,7 @@ type Query {
 
   # Histogram of blocks per hour
   blockCountPerHour(count: Int!): [Int!]!
+
+  # Count of transactions created by accounts of domain
+  transactionCountPerDomain: [CountPerDomain!]!
 }

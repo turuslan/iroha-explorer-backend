@@ -3,7 +3,7 @@ import DataLoader = require('dataloader');
 import * as lodash from 'lodash';
 import { DatabasePoolType, sql } from 'slonik';
 import { postgresSql as initSql } from './files';
-import { blockHeight, BlockProto, transactionHash, TransactionProto } from './iroha-api';
+import { accountDomain, blockHeight, BlockProto, transactionHash, TransactionProto } from './iroha-api';
 
 type First<T> = { value: T };
 
@@ -87,10 +87,11 @@ export class IrohaDb {
       for (const transaction of blockTransactions) {
         transactionIndex += 1;
         await this.pool.query(sql`
-          INSERT INTO transaction (protobuf, index, hash) VALUES (
+          INSERT INTO transaction (protobuf, index, hash, creator_domain) VALUES (
             ${bytesValue(transaction.serializeBinary())},
             ${transactionIndex},
-            ${transactionHash(transaction)}
+            ${transactionHash(transaction)},
+            ${accountDomain(transaction.getPayload().getReducedPayload().getCreatorAccountId())}
           )
         `);
 
@@ -253,6 +254,13 @@ export class IrohaDb {
 
   public blockCountPerHour(count: number) {
     return this.countPerBucket('block', 'hour', count);
+  }
+
+  public transactionCountPerDomain() {
+    return this.pool.any<{ domain: string, count: number }>(sql`
+      SELECT creator_domain AS domain, COUNT(1) AS count FROM transaction
+      GROUP BY creator_domain
+    `);
   }
 
   private countPerBucket(what: 'block' | 'transaction', unit: 'minute' | 'hour', count: number) {
