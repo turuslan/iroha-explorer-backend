@@ -36,6 +36,9 @@ type Transaction {
 
   # Transaction creator account
   createdBy: Account!
+
+  # Transaction commit time
+  time: String!
 }
 
 # Paginated list of transactions

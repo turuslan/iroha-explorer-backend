@@ -19,7 +19,8 @@ CREATE TABLE transaction (
   index BIGINT NOT NULL,
   hash CHAR(64) NOT NULL,
   creator_domain VARCHAR(255) NOT NULL,
-  block_height BIGINT NOT NULL
+  block_height BIGINT NOT NULL,
+  time TIMESTAMP WITH TIME ZONE NOT NULL
 );
 
 CREATE UNIQUE INDEX ON transaction(index);

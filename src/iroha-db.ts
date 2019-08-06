@@ -27,6 +27,7 @@ export interface Account {
 
 export interface Transaction {
   protobuf: TransactionProto;
+  time: string;
 }
 
 export interface Peer {
@@ -34,12 +35,17 @@ export interface Peer {
   public_key: string;
 }
 
-export const getBlockTransactions = (block: BlockProto) => block.getBlockV1().getPayload().getTransactionsList().map<Transaction>(protobuf => ({ protobuf }));
+export function getBlockTransactions(block: BlockProto) {
+  const blockPayload = block.getBlockV1().getPayload();
+  const time = dateValue(blockPayload.getCreatedTime());
+  return blockPayload.getTransactionsList().map<Transaction>(protobuf => ({ protobuf, time }));
+}
 
 const parseBlock = protobuf => BlockProto.deserializeBinary(new Uint8Array(protobuf));
 
-const parseTransaction = ({ protobuf }) => ({
+const parseTransaction = ({ protobuf, time }) => ({
   protobuf: TransactionProto.deserializeBinary(new Uint8Array(protobuf)),
+  time: dateValue(time),
 }) as Transaction;
 
 const bytesValue = (value: Uint8Array) => sql.raw('$1', [Buffer.from(value) as any]);
@@ -73,11 +79,12 @@ export class IrohaDb {
     return this.pool.transaction(async () => {
       const blockPayload = block.getBlockV1().getPayload();
       const blockTransactions = blockPayload.getTransactionsList();
+      const blockTime = dateValue(blockPayload.getCreatedTime());
       await this.pool.query(sql`
         INSERT INTO block (protobuf, height, created_time, transaction_count) VALUES (
           ${bytesValue(Buffer.from(block.serializeBinary()))},
           ${blockPayload.getHeight()},
-          ${dateValue(blockPayload.getCreatedTime())},
+          ${blockTime},
           ${blockTransactions.length}
         )
       `);
@@ -89,12 +96,13 @@ export class IrohaDb {
       for (const transaction of blockTransactions) {
         transactionIndex += 1;
         await this.pool.query(sql`
-          INSERT INTO transaction (protobuf, index, hash, creator_domain, block_height) VALUES (
+          INSERT INTO transaction (protobuf, index, hash, creator_domain, block_height, time) VALUES (
             ${bytesValue(transaction.serializeBinary())},
             ${transactionIndex},
             ${transactionHash(transaction)},
             ${accountDomain(transaction.getPayload().getReducedPayload().getCreatorAccountId())},
-            ${blockHeight(block)}
+            ${blockHeight(block)},
+            ${blockTime}
           )
         `);
 
@@ -166,7 +174,7 @@ export class IrohaDb {
   @autobind
   public transactionsByHash(hashes: string[]) {
     return this.pool.any<any>(sql`
-      SELECT protobuf FROM transaction
+      SELECT protobuf, time FROM transaction
       WHERE hash = ${anyOrOne(hashes, 'TEXT')}
     `).then(map(parseTransaction)).then(byKeys(x => transactionHash(x.protobuf), hashes));
   }
@@ -204,7 +212,7 @@ export class IrohaDb {
   public async transactionList(query: PagedQuery<number>) {
     const after = query.after || 0;
     const items = await this.pool.any<any>(sql`
-      SELECT protobuf FROM transaction
+      SELECT protobuf, time FROM transaction
       WHERE index > ${after}
       ORDER BY index
       LIMIT ${query.count}
