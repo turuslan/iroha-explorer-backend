@@ -8,6 +8,7 @@ import { accountDomain, blockHeight, BlockProto, transactionHash, TransactionPro
 type First<T> = { value: T };
 
 type PagedQuery<A> = { after: A, count: number };
+type TimeRangeQuery = { timeAfter?: string, timeBefore?: string };
 type PagedList<T, A> = { items: T[], nextAfter: A };
 
 const array = (items: any[], type: string) => sql.raw(`$1::${type}[]`, [items as any]);
@@ -19,6 +20,8 @@ const byKeys = <T, K extends number | string>(keyOf: (x: T) => K, keys: K[]) => 
   const lookup = lodash.keyBy(items, keyOf);
   return keys.map<T>(key => lodash.get(lookup, key, null));
 };
+
+const sqlAnd = (parts: any[]) => parts.length ? parts.reduce((a, x) => sql`${a} AND ${x}`) : sql`1 = 1`;
 
 export interface Account {
   id: string;
@@ -195,12 +198,20 @@ export class IrohaDb {
     `).then(byKeys(x => x.public_key, publicKeys));
   }
 
-  public async blockList(query: PagedQuery<number>, reverse: boolean = false) {
-    const after = query.after || (reverse ? 0x7FFFFFFF : 0);
+  public async blockList(query: PagedQuery<number> & TimeRangeQuery & { reverse?: boolean }) {
+    const after = (query.after === undefined || query.after === null) ? (query.reverse ? 0x7FFFFFFF : 0) : query.after;
+    const where = [];
+    where.push(sql`height ${sql.raw(query.reverse ? '<' : '>')} ${after}`);
+    if (query.timeAfter) {
+      where.push(sql`created_time >= ${query.timeAfter}`);
+    }
+    if (query.timeBefore) {
+      where.push(sql`created_time < ${query.timeBefore}`);
+    }
     const items = await this.pool.anyFirst(sql`
       SELECT protobuf FROM block
-      WHERE height ${sql.raw(reverse ? '<' : '>')} ${after}
-      ORDER BY height ${sql.raw(reverse ? 'DESC' : 'ASC')}
+      WHERE ${sqlAnd(where)}
+      ORDER BY height ${sql.raw(query.reverse ? 'DESC' : 'ASC')}
       LIMIT ${query.count}
     `).then(map(parseBlock));
     return {
@@ -209,11 +220,19 @@ export class IrohaDb {
     } as PagedList<BlockProto, number>;
   }
 
-  public async transactionList(query: PagedQuery<number>) {
-    const after = query.after || 0;
+  public async transactionList(query: PagedQuery<number> & TimeRangeQuery) {
+    const after = (query.after === undefined || query.after === null) ? 0 : query.after;
+    const where = [];
+    where.push(sql`index > ${after}`);
+    if (query.timeAfter) {
+      where.push(sql`time >= ${query.timeAfter}`);
+    }
+    if (query.timeBefore) {
+      where.push(sql`time < ${query.timeBefore}`);
+    }
     const items = await this.pool.any<any>(sql`
       SELECT protobuf, time FROM transaction
-      WHERE index > ${after}
+      WHERE ${sqlAnd(where)}
       ORDER BY index
       LIMIT ${query.count}
     `).then(map(parseTransaction));
