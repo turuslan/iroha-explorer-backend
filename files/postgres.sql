@@ -47,5 +47,13 @@ CREATE TABLE role (
 
 
 
+CREATE TABLE domain (
+  index INT NOT NULL UNIQUE,
+  id VARCHAR(255) NOT NULL UNIQUE,
+  default_role VARCHAR(32) NOT NULL
+);
+
+
+
 
 COMMIT;

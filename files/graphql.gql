@@ -104,6 +104,24 @@ type RoleList {
   nextAfter: Int!
 }
 
+# Iroha domain
+type Domain {
+  # Domain id
+  id: String!
+
+  # Domain permissions
+  defaultRole: Role!
+}
+
+# Paginated list of domains
+type DomainList {
+  # Domains in this page
+  items: [Domain!]!
+
+  # Next page "after" input
+  nextAfter: Int!
+}
+
 type CountPerDomain {
   domain: String!
   count: Int!
@@ -125,6 +143,9 @@ type Query {
   # Total role count
   roleCount: Int!
 
+  # Total domain count
+  domainCount: Int!
+
   # Block by height, or null if does not exist
   blockByHeight(height: Int!): Block
 
@@ -140,6 +161,9 @@ type Query {
   # Role by name, or null if does not exist
   roleByName(name: String!): Role
 
+  # Domain by id, or null if does not exist
+  domainById(id: String!): Domain
+
   # Chronological paginated list of blocks
   blockList(after: Int, count: Int!, reverse: Boolean, timeAfter: String, timeBefore: String): BlockList!
 
@@ -154,6 +178,9 @@ type Query {
 
   # Chronological paginated list of roles
   roleList(after: Int, count: Int!): RoleList!
+
+  # Chronological paginated list of domains
+  domainList(after: Int, count: Int!): DomainList!
 
   # Histogram of transactions per minute
   transactionCountPerMinute(count: Int!): [Int!]!
