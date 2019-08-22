@@ -1,6 +1,7 @@
 import autobind from 'autobind-decorator';
 import DataLoader = require('dataloader');
-import * as lodash from 'lodash';
+import get from 'lodash/get';
+import keyBy from 'lodash/keyBy';
 import { DatabasePoolType, sql } from 'slonik';
 import { postgresSql as initSql } from './files';
 import { accountDomain, blockHeight, BlockProto, transactionHash, TransactionProto } from './iroha-api';
@@ -16,9 +17,9 @@ const anyOrOne = (items: any[], type: string) => items.length === 1 ? sql`(${ite
 
 const map = <A, B>(f: (x: A) => B) => (xs: A[]) => xs.map(f);
 
-const byKeys = <T, K extends number | string>(keyOf: (x: T) => K, keys: K[]) => (items: T[]) => {
-  const lookup = lodash.keyBy(items, keyOf);
-  return keys.map<T>(key => lodash.get(lookup, key, null));
+const byKeys = <T, K extends number | string>(keyOf: keyof T | ((x: T) => K), keys: K[]) => (items: T[]) => {
+  const lookup = keyBy(items, keyOf);
+  return keys.map<T>(key => get(lookup, key, null));
 };
 
 const sqlAnd = (parts: any[]) => parts.length ? parts.reduce((a, x) => sql`${a} AND ${x}`) : sql`1 = 1`;
@@ -79,11 +80,11 @@ export class IrohaDb {
   }
 
   public applyBlock(block: BlockProto) {
-    return this.pool.transaction(async () => {
+    return this.pool.transaction(async (pool) => {
       const blockPayload = block.getBlockV1().getPayload();
       const blockTransactions = blockPayload.getTransactionsList();
       const blockTime = dateValue(blockPayload.getCreatedTime());
-      await this.pool.query(sql`
+      await pool.query(sql`
         INSERT INTO block (protobuf, height, created_time, transaction_count) VALUES (
           ${bytesValue(Buffer.from(block.serializeBinary()))},
           ${blockPayload.getHeight()},
@@ -98,7 +99,7 @@ export class IrohaDb {
 
       for (const transaction of blockTransactions) {
         transactionIndex += 1;
-        await this.pool.query(sql`
+        await pool.query(sql`
           INSERT INTO transaction (protobuf, index, hash, creator_domain, block_height, time) VALUES (
             ${bytesValue(transaction.serializeBinary())},
             ${transactionIndex},
@@ -113,7 +114,7 @@ export class IrohaDb {
           if (command.hasCreateAccount()) {
             const createAccount = command.getCreateAccount();
             accountIndex += 1;
-            await this.pool.query(sql`
+            await pool.query(sql`
               INSERT INTO account (index, id, quorum) VALUES (
                 ${accountIndex},
                 ${`${createAccount.getAccountName()}@${createAccount.getDomainId()}`},
@@ -122,14 +123,14 @@ export class IrohaDb {
             `);
           } else if (command.hasSetAccountQuorum()) {
             const setAccountQuorum = command.getSetAccountQuorum();
-            await this.pool.query(sql`
+            await pool.query(sql`
               UPDATE account SET quorum = ${setAccountQuorum.getQuorum()}
               WHERE id = ${setAccountQuorum.getAccountId()}
             `);
           } else if (command.hasAddPeer()) {
             const addPeer = command.getAddPeer();
             peerIndex += 1;
-            await this.pool.query(sql`
+            await pool.query(sql`
               INSERT INTO peer (index, address, public_key) VALUES (
                 ${peerIndex},
                 ${addPeer.getPeer().getAddress()},
@@ -142,29 +143,18 @@ export class IrohaDb {
     });
   }
 
-  public blockCount() {
-    return this.pool.oneFirst<First<number>>(sql`
-      SELECT COUNT(1) FROM block
-    `);
+  private static makeCount(table: 'block' | 'transaction' | 'account' | 'peer') {
+    return function (this: IrohaDb) {
+      return this.pool.oneFirst<First<number>>(sql`
+        SELECT COUNT(1) FROM ${sql.raw(table)}
+      `);
+    };
   }
 
-  public transactionCount() {
-    return this.pool.oneFirst<First<number>>(sql`
-      SELECT COUNT(1) FROM transaction
-    `);
-  }
-
-  public accountCount() {
-    return this.pool.oneFirst<First<number>>(sql`
-      SELECT COUNT(1) FROM account
-    `);
-  }
-
-  public peerCount() {
-    return this.pool.oneFirst<First<number>>(sql`
-      SELECT COUNT(1) FROM peer
-    `);
-  }
+  public blockCount = IrohaDb.makeCount('block');
+  public transactionCount = IrohaDb.makeCount('transaction');
+  public accountCount = IrohaDb.makeCount('account');
+  public peerCount = IrohaDb.makeCount('peer');
 
   @autobind
   public blocksByHeight(heights: number[]) {
@@ -187,7 +177,7 @@ export class IrohaDb {
     return this.pool.any<Account>(sql`
       SELECT id, quorum FROM account
       WHERE id = ${anyOrOne(ids, 'TEXT')}
-    `).then(byKeys(x => x.id, ids));
+    `).then(byKeys('id', ids));
   }
 
   @autobind
@@ -195,7 +185,23 @@ export class IrohaDb {
     return this.pool.any<Peer>(sql`
       SELECT address, public_key FROM peer
       WHERE public_key = ${anyOrOne(publicKeys, 'TEXT')}
-    `).then(byKeys(x => x.public_key, publicKeys));
+    `).then(byKeys('public_key', publicKeys));
+  }
+
+  private static makePagedList<T>(table: 'account' | 'peer', fields: (keyof T)[]) {
+    return async function (this: IrohaDb, query: PagedQuery<number>) {
+      const after = query.after || 0;
+      const items = await this.pool.any<T>(sql`
+        SELECT ${sql.raw(fields.join(', '))} FROM ${sql.raw(table)}
+        WHERE index > ${after}
+        ORDER BY index
+        LIMIT ${query.count}
+      `);
+      return {
+        items,
+        nextAfter: after + items.length,
+      } as PagedList<T, number>;
+    };
   }
 
   public async blockList(query: PagedQuery<number> & TimeRangeQuery & { reverse?: boolean }) {
@@ -242,33 +248,8 @@ export class IrohaDb {
     } as PagedList<Transaction, number>;
   }
 
-  public async accountList(query: PagedQuery<number>) {
-    const after = query.after || 0;
-    const items = await this.pool.any<Account>(sql`
-      SELECT id, quorum FROM account
-      WHERE index > ${after}
-      ORDER BY index
-      LIMIT ${query.count}
-    `);
-    return {
-      items,
-      nextAfter: after + items.length,
-    } as PagedList<Account, number>;
-  }
-
-  public async peerList(query: PagedQuery<number>) {
-    const after = query.after || 0;
-    const items = await this.pool.any<Peer>(sql`
-      SELECT address, public_key FROM peer
-      WHERE index > ${after}
-      ORDER BY index
-      LIMIT ${query.count}
-    `);
-    return {
-      items,
-      nextAfter: after + items.length,
-    } as PagedList<Peer, number>;
-  }
+  public accountList = IrohaDb.makePagedList<Account>('account', ['id', 'quorum']);
+  public peerList = IrohaDb.makePagedList<Peer>('peer', ['address', 'public_key']);
 
   public transactionCountPerMinute(count: number) {
     return this.countPerBucket('transaction', 'minute', count);
