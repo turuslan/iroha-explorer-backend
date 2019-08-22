@@ -86,6 +86,24 @@ type PeerList {
   nextAfter: Int!
 }
 
+# Iroha role
+type Role {
+  # Role name
+  name: String!
+
+  # Role permissions
+  permissions: [String!]!
+}
+
+# Paginated list of roles
+type RoleList {
+  # Roles in this page
+  items: [Role!]!
+
+  # Next page "after" input
+  nextAfter: Int!
+}
+
 type CountPerDomain {
   domain: String!
   count: Int!
@@ -104,6 +122,9 @@ type Query {
   # Total peer count
   peerCount: Int!
 
+  # Total role count
+  roleCount: Int!
+
   # Block by height, or null if does not exist
   blockByHeight(height: Int!): Block
 
@@ -116,6 +137,9 @@ type Query {
   # Peer by public key, or null if does not exist
   peerByPublicKey(publicKey: String!): Peer
 
+  # Role by name, or null if does not exist
+  roleByName(name: String!): Role
+
   # Chronological paginated list of blocks
   blockList(after: Int, count: Int!, reverse: Boolean, timeAfter: String, timeBefore: String): BlockList!
 
@@ -127,6 +151,9 @@ type Query {
 
   # Chronological paginated list of peers
   peerList(after: Int, count: Int!): PeerList!
+
+  # Chronological paginated list of roles
+  roleList(after: Int, count: Int!): RoleList!
 
   # Histogram of transactions per minute
   transactionCountPerMinute(count: Int!): [Int!]!

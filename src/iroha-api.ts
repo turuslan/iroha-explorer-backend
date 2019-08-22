@@ -1,9 +1,12 @@
 import * as grpc from 'grpc';
 import { sha3_256 } from 'js-sha3';
+import invert from 'lodash/invert';
+import propertyOf from 'lodash/propertyOf';
 
 import { queryHelper } from 'iroha-helpers';
 import { Block } from 'iroha-helpers/lib/proto/block_pb';
 import { QueryService_v1Client } from 'iroha-helpers/lib/proto/endpoint_grpc_pb';
+import { RolePermission } from 'iroha-helpers/lib/proto/primitive_pb';
 import { ErrorResponse } from 'iroha-helpers/lib/proto/qry_responses_pb';
 import { Transaction } from 'iroha-helpers/lib/proto/transaction_pb';
 
@@ -166,3 +169,5 @@ export function accountDomain(accountId: string) {
   const match = accountId.match(ACCOUNT_REGEX);
   return match && match[1];
 }
+
+export const rolePermissionName = propertyOf(invert(RolePermission));

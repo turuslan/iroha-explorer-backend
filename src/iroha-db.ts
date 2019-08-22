@@ -39,6 +39,11 @@ export interface Peer {
   public_key: string;
 }
 
+export interface Role {
+  name: string;
+  permissions: number[];
+}
+
 export function getBlockTransactions(block: BlockProto) {
   const blockPayload = block.getBlockV1().getPayload();
   const time = dateValue(blockPayload.getCreatedTime());
@@ -60,6 +65,7 @@ export class IrohaDb {
   public transactionLoader: DataLoader<string, Transaction>;
   public accountLoader: DataLoader<string, Account>;
   public peerLoader: DataLoader<string, Peer>;
+  public roleLoader: DataLoader<string, Role>;
 
   public static init(pool: DatabasePoolType) {
     return pool.query(sql`${sql.raw(initSql)}`);
@@ -72,6 +78,7 @@ export class IrohaDb {
     this.transactionLoader = new DataLoader(this.transactionsByHash);
     this.accountLoader = new DataLoader(this.accountsById);
     this.peerLoader = new DataLoader(this.peersByPublicKey);
+    this.roleLoader = new DataLoader(this.rolesByName);
   }
 
   @autobind
@@ -96,6 +103,7 @@ export class IrohaDb {
       let transactionIndex = await this.transactionCount();
       let accountIndex = await this.accountCount();
       let peerIndex = await this.peerCount();
+      let roleIndex = await this.roleCount();
 
       for (const transaction of blockTransactions) {
         transactionIndex += 1;
@@ -137,13 +145,23 @@ export class IrohaDb {
                 ${addPeer.getPeer().getPeerKey()}
               )
             `);
+          } else if (command.hasCreateRole()) {
+            const createRole = command.getCreateRole();
+            roleIndex += 1;
+            await pool.query(sql`
+              INSERT INTO role (index, name, permissions) VALUES (
+                ${roleIndex},
+                ${createRole.getRoleName()},
+                ${array(createRole.getPermissionsList(), 'INT')}
+              )
+            `);
           }
         }
       }
     });
   }
 
-  private static makeCount(table: 'block' | 'transaction' | 'account' | 'peer') {
+  private static makeCount(table: 'block' | 'transaction' | 'account' | 'peer' | 'role') {
     return function (this: IrohaDb) {
       return this.pool.oneFirst<First<number>>(sql`
         SELECT COUNT(1) FROM ${sql.raw(table)}
@@ -155,6 +173,7 @@ export class IrohaDb {
   public transactionCount = IrohaDb.makeCount('transaction');
   public accountCount = IrohaDb.makeCount('account');
   public peerCount = IrohaDb.makeCount('peer');
+  public roleCount = IrohaDb.makeCount('role');
 
   @autobind
   public blocksByHeight(heights: number[]) {
@@ -188,7 +207,15 @@ export class IrohaDb {
     `).then(byKeys('public_key', publicKeys));
   }
 
-  private static makePagedList<T>(table: 'account' | 'peer', fields: (keyof T)[]) {
+  @autobind
+  public rolesByName(names: string[]) {
+    return this.pool.any<Role>(sql`
+      SELECT name, permissions FROM role
+      WHERE name = ${anyOrOne(names, 'TEXT')}
+    `).then(byKeys('name', names));
+  }
+
+  private static makePagedList<T>(table: 'account' | 'peer' | 'role', fields: (keyof T)[]) {
     return async function (this: IrohaDb, query: PagedQuery<number>) {
       const after = query.after || 0;
       const items = await this.pool.any<T>(sql`
@@ -250,6 +277,7 @@ export class IrohaDb {
 
   public accountList = IrohaDb.makePagedList<Account>('account', ['id', 'quorum']);
   public peerList = IrohaDb.makePagedList<Peer>('peer', ['address', 'public_key']);
+  public roleList = IrohaDb.makePagedList<Role>('role', ['name', 'permissions']);
 
   public transactionCountPerMinute(count: number) {
     return this.countPerBucket('transaction', 'minute', count);

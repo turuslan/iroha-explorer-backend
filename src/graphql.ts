@@ -1,7 +1,7 @@
 import { makeExecutableSchema } from 'graphql-tools';
 import { graphqlGql } from './files';
-import { blockHash, blockHeight, BlockProto, transactionHash } from './iroha-api';
-import { getBlockTransactions, IrohaDb, Peer, Transaction } from './iroha-db';
+import { blockHash, blockHeight, BlockProto, rolePermissionName, transactionHash } from './iroha-api';
+import { getBlockTransactions, IrohaDb, Peer, Role, Transaction } from './iroha-db';
 
 export const schema = makeExecutableSchema<IrohaDb>({
   typeDefs: graphqlGql,
@@ -21,21 +21,27 @@ export const schema = makeExecutableSchema<IrohaDb>({
     Peer: {
       publicKey: (peer: Peer) => peer.public_key,
     },
+    Role: {
+      permissions: (role: Role) => role.permissions.map(rolePermissionName),
+    },
     Query: {
       blockCount: (_, {}, db) => db.blockCount(),
       transactionCount: (_, {}, db) => db.transactionCount(),
       accountCount: (_, {}, db) => db.accountCount(),
       peerCount: (_, {}, db) => db.peerCount(),
+      roleCount: (_, {}, db) => db.roleCount(),
 
       blockByHeight: (_, { height }, { blockLoader }) => blockLoader.load(height),
       transactionByHash: (_, { hash }, { transactionLoader }) => transactionLoader.load(hash),
       accountById: (_, { id }, { accountLoader }) => accountLoader.load(id),
       peerByPublicKey: (_, { publicKey }, { peerLoader }) => peerLoader.load(publicKey),
+      roleByName: (_, { name }, { roleLoader }) => roleLoader.load(name),
 
       blockList: (_, { after, count, timeAfter, timeBefore, reverse }, db) => db.blockList({ after, count, reverse, timeAfter, timeBefore }),
       transactionList: (_, { after, count, timeAfter, timeBefore }, db) => db.transactionList({ after, count, timeAfter, timeBefore }),
       accountList: (_, { after, count }, db) => db.accountList({ after, count }),
       peerList: (_, { after, count }, db) => db.peerList({ after, count }),
+      roleList: (_, { after, count }, db) => db.roleList({ after, count }),
 
       transactionCountPerMinute: (_, { count }, db) => db.transactionCountPerMinute(count),
       transactionCountPerHour: (_, { count }, db) => db.transactionCountPerHour(count),

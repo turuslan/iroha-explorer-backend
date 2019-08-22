@@ -39,5 +39,13 @@ CREATE TABLE peer (
 
 
 
+CREATE TABLE role (
+  index INT NOT NULL UNIQUE,
+  name VARCHAR(32) NOT NULL UNIQUE,
+  permissions INT[] NOT NULL
+);
+
+
+
 
 COMMIT;
