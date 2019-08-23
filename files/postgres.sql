@@ -27,7 +27,8 @@ CREATE TABLE account (
   index INT NOT NULL UNIQUE,
   id VARCHAR(288) NOT NULL UNIQUE,
   quorum INT NOT NULL,
-  roles VARCHAR(32)[] NOT NULL
+  roles VARCHAR(32)[] NOT NULL,
+  permissions_granted JSON[] NOT NULL
 );
 
 

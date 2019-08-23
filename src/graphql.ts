@@ -4,8 +4,8 @@ import map from 'lodash/fp/map';
 import prop from 'lodash/fp/prop';
 import uniq from 'lodash/uniq';
 import { graphqlGql } from './files';
-import { blockHash, blockHeight, BlockProto, rolePermissionName, transactionHash } from './iroha-api';
-import { Account, Domain, getBlockTransactions, IrohaDb, Peer, Role, Transaction } from './iroha-db';
+import { blockHash, blockHeight, BlockProto, grantablePermissionName, rolePermissionName, transactionHash } from './iroha-api';
+import { Account, Domain, getBlockTransactions, IrohaDb, Peer, PermissionGranted, Role, Transaction } from './iroha-db';
 
 export const schema = makeExecutableSchema<IrohaDb>({
   typeDefs: graphqlGql,
@@ -28,6 +28,11 @@ export const schema = makeExecutableSchema<IrohaDb>({
         .then(flatMap(prop('permissions')))
         .then(uniq)
         .then(map(rolePermissionName)),
+      permissionsGrantedBy: (account: Account) => account.permissions_granted.filter(x => x.by === account.id),
+      permissionsGrantedTo: (account: Account) => account.permissions_granted.filter(x => x.to === account.id),
+    },
+    PermissionGranted: {
+      permission: ({ permission }: PermissionGranted) => grantablePermissionName(permission),
     },
     Peer: {
       publicKey: (peer: Peer) => peer.public_key,

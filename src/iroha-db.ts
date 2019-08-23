@@ -28,6 +28,7 @@ export interface Account {
   id: string;
   quorum: number;
   roles: string[];
+  permissions_granted: PermissionGranted[];
 }
 
 export interface Transaction {
@@ -48,6 +49,12 @@ export interface Role {
 export interface Domain {
   id: string;
   default_role: string;
+}
+
+export interface PermissionGranted {
+  by: string;
+  to: string;
+  permission: number;
 }
 
 export function getBlockTransactions(block: BlockProto) {
@@ -117,13 +124,15 @@ export class IrohaDb {
       let domainIndex = await db.domainCount();
 
       for (const transaction of blockTransactions) {
+        const creatorId = transaction.getPayload().getReducedPayload().getCreatorAccountId();
+
         transactionIndex += 1;
         await pool.query(sql`
           INSERT INTO transaction (protobuf, index, hash, creator_domain, block_height, time) VALUES (
             ${bytesValue(transaction.serializeBinary())},
             ${transactionIndex},
             ${transactionHash(transaction)},
-            ${accountDomain(transaction.getPayload().getReducedPayload().getCreatorAccountId())},
+            ${accountDomain(creatorId)},
             ${blockHeight(block)},
             ${blockTime}
           )
@@ -135,11 +144,12 @@ export class IrohaDb {
             const domain = await db.domainLoader.load(createAccount.getDomainId());
             accountIndex += 1;
             await pool.query(sql`
-              INSERT INTO account (index, id, quorum, roles) VALUES (
+              INSERT INTO account (index, id, quorum, roles, permissions_granted) VALUES (
                 ${accountIndex},
                 ${`${createAccount.getAccountName()}@${createAccount.getDomainId()}`},
                 1,
-                ${array([domain.default_role], 'TEXT')}
+                ARRAY[${domain.default_role}],
+                ARRAY[]::JSON[]
               )
             `);
           } else if (command.hasSetAccountQuorum()) {
@@ -190,6 +200,22 @@ export class IrohaDb {
               UPDATE account SET roles = ${sql.raw(append ? 'ARRAY_APPEND' : 'ARRAY_REMOVE')}(roles, ${appendDetach.getRoleName()})
               WHERE id = ${appendDetach.getAccountId()}
             `);
+          } else if (command.hasGrantPermission() || command.hasRevokePermission()) {
+            const grant = command.hasGrantPermission();
+            const grantRevoke = grant ? command.getGrantPermission() : command.getRevokePermission();
+            const permissionGranted: PermissionGranted = {
+              by: creatorId,
+              to: grantRevoke.getAccountId(),
+              permission: grantRevoke.getPermission(),
+            };
+            await pool.query(sql`
+              UPDATE account
+              SET permissions_granted = ${sql.raw(grant ? 'ARRAY_APPEND' : 'ARRAY_REMOVE')}(
+                  permissions_granted::TEXT[],
+                  ${JSON.stringify(permissionGranted)}
+                )::JSON[]
+              WHERE id = ${permissionGranted.by} OR id = ${permissionGranted.to}
+            `);
           }
         }
       }
@@ -230,7 +256,7 @@ export class IrohaDb {
   @autobind
   public accountsById(ids: string[]) {
     return this.pool.any<Account>(sql`
-      SELECT id, quorum, roles FROM account
+      SELECT id, quorum, roles, permissions_granted FROM account
       WHERE id = ${anyOrOne(ids, 'TEXT')}
     `).then(byKeys('id', ids));
   }
@@ -319,7 +345,7 @@ export class IrohaDb {
     } as PagedList<Transaction, number>;
   }
 
-  public accountList = IrohaDb.makePagedList<Account>('account', ['id', 'quorum', 'roles']);
+  public accountList = IrohaDb.makePagedList<Account>('account', ['id', 'quorum', 'roles', 'permissions_granted']);
   public peerList = IrohaDb.makePagedList<Peer>('peer', ['address', 'public_key']);
   public roleList = IrohaDb.makePagedList<Role>('role', ['name', 'permissions']);
   public domainList = IrohaDb.makePagedList<Domain>('domain', ['id', 'default_role']);

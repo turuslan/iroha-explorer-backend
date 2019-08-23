@@ -63,6 +63,18 @@ type Account {
 
   # Permissions from roles
   permissions: [String!]!
+
+  # Permissions granted by this account
+  permissionsGrantedBy: [PermissionGranted!]!
+
+  # Permissions granted to this account
+  permissionsGrantedTo: [PermissionGranted!]!
+}
+
+type PermissionGranted {
+  by: String!
+  to: String!
+  permission: String!
 }
 
 # Paginated list of accounts

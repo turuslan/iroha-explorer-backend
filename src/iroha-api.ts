@@ -6,7 +6,7 @@ import propertyOf from 'lodash/propertyOf';
 import { queryHelper } from 'iroha-helpers';
 import { Block } from 'iroha-helpers/lib/proto/block_pb';
 import { QueryService_v1Client } from 'iroha-helpers/lib/proto/endpoint_grpc_pb';
-import { RolePermission } from 'iroha-helpers/lib/proto/primitive_pb';
+import { GrantablePermission, RolePermission } from 'iroha-helpers/lib/proto/primitive_pb';
 import { ErrorResponse } from 'iroha-helpers/lib/proto/qry_responses_pb';
 import { Transaction } from 'iroha-helpers/lib/proto/transaction_pb';
 
@@ -171,3 +171,4 @@ export function accountDomain(accountId: string) {
 }
 
 export const rolePermissionName = propertyOf(invert(RolePermission));
+export const grantablePermissionName = propertyOf(invert(GrantablePermission));
