@@ -2,7 +2,7 @@ import autobind from 'autobind-decorator';
 import DataLoader = require('dataloader');
 import get from 'lodash/get';
 import keyBy from 'lodash/keyBy';
-import { DatabasePoolType, sql } from 'slonik';
+import { DatabaseTransactionConnectionType, sql } from 'slonik';
 import { postgresSql as initSql } from './files';
 import { accountDomain, blockHeight, BlockProto, transactionHash, TransactionProto } from './iroha-api';
 
@@ -73,12 +73,12 @@ export class IrohaDb {
   public roleLoader: DataLoader<string, Role>;
   public domainLoader: DataLoader<string, Domain>;
 
-  public static init(pool: DatabasePoolType) {
+  public static init(pool: DatabaseTransactionConnectionType) {
     return pool.query(sql`${sql.raw(initSql)}`);
   }
 
   public constructor(
-    private pool: DatabasePoolType,
+    private pool: DatabaseTransactionConnectionType,
   ) {
     this.blockLoader = new DataLoader(this.blocksByHeight);
     this.transactionLoader = new DataLoader(this.transactionsByHash);
@@ -95,6 +95,8 @@ export class IrohaDb {
 
   public applyBlock(block: BlockProto) {
     return this.pool.transaction(async (pool) => {
+      const db = new IrohaDb(pool);
+
       const blockPayload = block.getBlockV1().getPayload();
       const blockTransactions = blockPayload.getTransactionsList();
       const blockTime = dateValue(blockPayload.getCreatedTime());
@@ -107,11 +109,11 @@ export class IrohaDb {
         )
       `);
 
-      let transactionIndex = await this.transactionCount();
-      let accountIndex = await this.accountCount();
-      let peerIndex = await this.peerCount();
-      let roleIndex = await this.roleCount();
-      let domainIndex = await this.domainCount();
+      let transactionIndex = await db.transactionCount();
+      let accountIndex = await db.accountCount();
+      let peerIndex = await db.peerCount();
+      let roleIndex = await db.roleCount();
+      let domainIndex = await db.domainCount();
 
       for (const transaction of blockTransactions) {
         transactionIndex += 1;
