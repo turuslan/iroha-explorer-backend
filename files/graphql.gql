@@ -57,6 +57,12 @@ type Account {
 
   # Account quorum
   quorum: Int!
+  
+  # Account roles
+  roles: [Role!]!
+
+  # Permissions from roles
+  permissions: [String!]!
 }
 
 # Paginated list of accounts

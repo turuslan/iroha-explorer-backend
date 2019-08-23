@@ -27,6 +27,7 @@ const sqlAnd = (parts: any[]) => parts.length ? parts.reduce((a, x) => sql`${a} 
 export interface Account {
   id: string;
   quorum: number;
+  roles: string[];
 }
 
 export interface Transaction {
@@ -131,12 +132,14 @@ export class IrohaDb {
         for (const command of transaction.getPayload().getReducedPayload().getCommandsList()) {
           if (command.hasCreateAccount()) {
             const createAccount = command.getCreateAccount();
+            const domain = await db.domainLoader.load(createAccount.getDomainId());
             accountIndex += 1;
             await pool.query(sql`
-              INSERT INTO account (index, id, quorum) VALUES (
+              INSERT INTO account (index, id, quorum, roles) VALUES (
                 ${accountIndex},
                 ${`${createAccount.getAccountName()}@${createAccount.getDomainId()}`},
-                1
+                1,
+                ${array([domain.default_role], 'TEXT')}
               )
             `);
           } else if (command.hasSetAccountQuorum()) {
@@ -179,6 +182,14 @@ export class IrohaDb {
                 ${domain.default_role}
               )
             `);
+            db.domainLoader.prime(domain.id, domain);
+          } else if (command.hasAppendRole() || command.hasDetachRole()) {
+            const append = command.hasAppendRole();
+            const appendDetach = append ? command.getAppendRole() : command.getDetachRole();
+            await pool.query(sql`
+              UPDATE account SET roles = ${sql.raw(append ? 'ARRAY_APPEND' : 'ARRAY_REMOVE')}(roles, ${appendDetach.getRoleName()})
+              WHERE id = ${appendDetach.getAccountId()}
+            `);
           }
         }
       }
@@ -219,7 +230,7 @@ export class IrohaDb {
   @autobind
   public accountsById(ids: string[]) {
     return this.pool.any<Account>(sql`
-      SELECT id, quorum FROM account
+      SELECT id, quorum, roles FROM account
       WHERE id = ${anyOrOne(ids, 'TEXT')}
     `).then(byKeys('id', ids));
   }
@@ -308,7 +319,7 @@ export class IrohaDb {
     } as PagedList<Transaction, number>;
   }
 
-  public accountList = IrohaDb.makePagedList<Account>('account', ['id', 'quorum']);
+  public accountList = IrohaDb.makePagedList<Account>('account', ['id', 'quorum', 'roles']);
   public peerList = IrohaDb.makePagedList<Peer>('peer', ['address', 'public_key']);
   public roleList = IrohaDb.makePagedList<Role>('role', ['name', 'permissions']);
   public domainList = IrohaDb.makePagedList<Domain>('domain', ['id', 'default_role']);

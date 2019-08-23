@@ -1,7 +1,11 @@
 import { makeExecutableSchema } from 'graphql-tools';
+import flatMap from 'lodash/fp/flatMap';
+import map from 'lodash/fp/map';
+import prop from 'lodash/fp/prop';
+import uniq from 'lodash/uniq';
 import { graphqlGql } from './files';
 import { blockHash, blockHeight, BlockProto, rolePermissionName, transactionHash } from './iroha-api';
-import { Domain, getBlockTransactions, IrohaDb, Peer, Role, Transaction } from './iroha-db';
+import { Account, Domain, getBlockTransactions, IrohaDb, Peer, Role, Transaction } from './iroha-db';
 
 export const schema = makeExecutableSchema<IrohaDb>({
   typeDefs: graphqlGql,
@@ -17,6 +21,13 @@ export const schema = makeExecutableSchema<IrohaDb>({
     Transaction: {
       hash: (transaction: Transaction) => transactionHash(transaction.protobuf),
       createdBy: (transaction: Transaction, {}, { accountLoader }) => accountLoader.load(transaction.protobuf.getPayload().getReducedPayload().getCreatorAccountId()),
+    },
+    Account: {
+      roles: (account: Account, {}, { roleLoader }) => roleLoader.loadMany(account.roles),
+      permissions: (account: Account, {}, { roleLoader }) => roleLoader.loadMany(account.roles)
+        .then(flatMap(prop('permissions')))
+        .then(uniq)
+        .then(map(rolePermissionName)),
     },
     Peer: {
       publicKey: (peer: Peer) => peer.public_key,
