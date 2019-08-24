@@ -1,5 +1,5 @@
 import { Block, Block_v1 } from 'iroha-helpers/lib/proto/block_pb';
-import { Command, CreateAccount, SetAccountQuorum } from 'iroha-helpers/lib/proto/commands_pb';
+import { Command, CreateAccount, CreateDomain, SetAccountQuorum } from 'iroha-helpers/lib/proto/commands_pb';
 import { Transaction } from 'iroha-helpers/lib/proto/transaction_pb';
 
 export function makeBlock(height: number, createdTime: string, transactions: Transaction[]) {
@@ -38,6 +38,16 @@ function createAccount(id: string) {
 
   const command = new Command();
   command.setCreateAccount(createAccount);
+  return command;
+}
+
+function createDomain(id: string) {
+  const createDomain = new CreateDomain();
+  createDomain.setDefaultRole('mock');
+  createDomain.setDomainId(id);
+
+  const command = new Command();
+  command.setCreateDomain(createDomain);
   return command;
 }
 
@@ -91,6 +101,7 @@ export const account3 = 'eve@explorer';
 
 addStep('2019-01-01T09:00Z', [
   transaction(account1, [
+    createDomain('explorer'),
     createAccount(account1),
   ]),
 ]);
