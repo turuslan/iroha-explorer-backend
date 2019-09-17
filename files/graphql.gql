@@ -45,6 +45,9 @@ type Transaction {
 
   # Public keys used to sign this transaction
   signatories: [String!]!
+
+  # JSON commands contained in this transaction
+  commandsJson: String!
 }
 
 # Paginated list of transactions
