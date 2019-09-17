@@ -34,6 +34,7 @@ export interface Account {
 export interface Transaction {
   protobuf: TransactionProto;
   time: string;
+  block_height: number;
 }
 
 export interface Peer {
@@ -60,14 +61,16 @@ export interface PermissionGranted {
 export function getBlockTransactions(block: BlockProto) {
   const blockPayload = block.getBlockV1().getPayload();
   const time = dateValue(blockPayload.getCreatedTime());
-  return blockPayload.getTransactionsList().map<Transaction>(protobuf => ({ protobuf, time }));
+  const block_height = blockHeight(block);
+  return blockPayload.getTransactionsList().map<Transaction>(protobuf => ({ protobuf, time, block_height }));
 }
 
 const parseBlock = protobuf => BlockProto.deserializeBinary(new Uint8Array(protobuf));
 
-const parseTransaction = ({ protobuf, time }) => ({
+const parseTransaction = ({ protobuf, time, block_height }) => ({
   protobuf: TransactionProto.deserializeBinary(new Uint8Array(protobuf)),
   time: dateValue(time),
+  block_height,
 }) as Transaction;
 
 const bytesValue = (value: Uint8Array) => sql.raw('$1', [Buffer.from(value) as any]);
@@ -248,7 +251,7 @@ export class IrohaDb {
   @autobind
   public transactionsByHash(hashes: string[]) {
     return this.pool.any<any>(sql`
-      SELECT protobuf, time FROM transaction
+      SELECT protobuf, time, block_height FROM transaction
       WHERE hash = ${anyOrOne(hashes, 'TEXT')}
     `).then(map(parseTransaction)).then(byKeys(x => transactionHash(x.protobuf), hashes));
   }
@@ -334,7 +337,7 @@ export class IrohaDb {
       where.push(sql`time < ${query.timeBefore}`);
     }
     const items = await this.pool.any<any>(sql`
-      SELECT protobuf, time FROM transaction
+      SELECT protobuf, time, block_height FROM transaction
       WHERE ${sqlAnd(where)}
       ORDER BY index
       LIMIT ${query.count}

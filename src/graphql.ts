@@ -21,6 +21,7 @@ export const schema = makeExecutableSchema<IrohaDb>({
     Transaction: {
       hash: (transaction: Transaction) => transactionHash(transaction.protobuf),
       createdBy: (transaction: Transaction, {}, { accountLoader }) => accountLoader.load(transaction.protobuf.getPayload().getReducedPayload().getCreatorAccountId()),
+      blockHeight: (transaction: Transaction) => transaction.block_height,
     },
     Account: {
       roles: (account: Account, {}, { roleLoader }) => roleLoader.loadMany(account.roles),

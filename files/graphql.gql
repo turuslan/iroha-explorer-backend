@@ -39,6 +39,9 @@ type Transaction {
 
   # Transaction commit time
   time: String!
+
+  # Height of block containing this transaction
+  blockHeight: Int!
 }
 
 # Paginated list of transactions
