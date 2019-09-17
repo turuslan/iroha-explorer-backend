@@ -42,6 +42,9 @@ type Transaction {
 
   # Height of block containing this transaction
   blockHeight: Int!
+
+  # Public keys used to sign this transaction
+  signatories: [String!]!
 }
 
 # Paginated list of transactions
