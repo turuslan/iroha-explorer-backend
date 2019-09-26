@@ -5,6 +5,7 @@
     "max-line-length": [false],
     "no-floating-promises": [true],
     "object-shorthand-properties-first": [false],
-    "ordered-imports": [true]
+    "ordered-imports": [true],
+    "variable-name": [false]
   }
 }
