@@ -16,6 +16,7 @@ CREATE TABLE transaction (
   protobuf BYTEA NOT NULL,
   index BIGINT NOT NULL UNIQUE,
   hash CHAR(64) NOT NULL UNIQUE,
+  creator_id VARCHAR(288) NOT NULL,
   creator_domain VARCHAR(255) NOT NULL,
   block_height BIGINT NOT NULL,
   time TIMESTAMP WITH TIME ZONE NOT NULL

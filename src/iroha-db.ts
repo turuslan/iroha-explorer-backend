@@ -2,6 +2,7 @@ import autobind from 'autobind-decorator';
 import DataLoader = require('dataloader');
 import get from 'lodash/get';
 import keyBy from 'lodash/keyBy';
+import last from 'lodash/last';
 import { DatabaseTransactionConnectionType, sql } from 'slonik';
 import { postgresSql as initSql } from './files';
 import { accountDomain, blockHeight, BlockProto, transactionHash, TransactionProto } from './iroha-api';
@@ -32,6 +33,7 @@ export interface Account {
 }
 
 export interface Transaction {
+  index?: number;
   protobuf: TransactionProto;
   time: string;
   block_height: number;
@@ -67,7 +69,8 @@ export function getBlockTransactions(block: BlockProto) {
 
 const parseBlock = protobuf => BlockProto.deserializeBinary(new Uint8Array(protobuf));
 
-const parseTransaction = ({ protobuf, time, block_height }) => ({
+const parseTransaction = ({ index, protobuf, time, block_height }) => ({
+  index,
   protobuf: TransactionProto.deserializeBinary(new Uint8Array(protobuf)),
   time: dateValue(time),
   block_height,
@@ -131,10 +134,11 @@ export class IrohaDb {
 
         transactionIndex += 1;
         await pool.query(sql`
-          INSERT INTO transaction (protobuf, index, hash, creator_domain, block_height, time) VALUES (
+          INSERT INTO transaction (protobuf, index, hash, creator_id, creator_domain, block_height, time) VALUES (
             ${bytesValue(transaction.serializeBinary())},
             ${transactionIndex},
             ${transactionHash(transaction)},
+            ${creatorId},
             ${accountDomain(creatorId)},
             ${blockHeight(block)},
             ${blockTime}
@@ -326,7 +330,7 @@ export class IrohaDb {
     } as PagedList<BlockProto, number>;
   }
 
-  public async transactionList(query: PagedQuery<number> & TimeRangeQuery) {
+  public async transactionList(query: PagedQuery<number> & TimeRangeQuery & { creatorId?: string }) {
     const after = (query.after === undefined || query.after === null) ? 0 : query.after;
     const where = [];
     where.push(sql`index > ${after}`);
@@ -336,15 +340,18 @@ export class IrohaDb {
     if (query.timeBefore) {
       where.push(sql`time < ${query.timeBefore}`);
     }
+    if (query.creatorId) {
+      where.push(sql`creator_id = ${query.creatorId}`);
+    }
     const items = await this.pool.any<any>(sql`
-      SELECT protobuf, time, block_height FROM transaction
+      SELECT index, protobuf, time, block_height FROM transaction
       WHERE ${sqlAnd(where)}
       ORDER BY index
       LIMIT ${query.count}
     `).then(map(parseTransaction));
     return {
       items,
-      nextAfter: after + items.length,
+      nextAfter: items.length ? last(items).index : after,
     } as PagedList<Transaction, number>;
   }
 
