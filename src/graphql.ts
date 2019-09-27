@@ -63,7 +63,7 @@ export const schema = makeExecutableSchema<IrohaDb>({
 
       blockList: (_, { after, count, timeAfter, timeBefore, reverse }, db) => db.blockList({ after, count, reverse, timeAfter, timeBefore }),
       transactionList: (_, { after, count, timeAfter, timeBefore, creatorId }, db) => db.transactionList({ after, count, timeAfter, timeBefore, creatorId }),
-      accountList: (_, { after, count }, db) => db.accountList({ after, count }),
+      accountList: (_, { after, count, id }, db) => db.accountList({ after, count, id }),
       peerList: (_, { after, count }, db) => db.peerList({ after, count }),
       roleList: (_, { after, count }, db) => db.roleList({ after, count }),
       domainList: (_, { after, count }, db) => db.domainList({ after, count }),

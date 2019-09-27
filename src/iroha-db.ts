@@ -26,6 +26,7 @@ const byKeys = <T, K extends number | string>(keyOf: keyof T | ((x: T) => K), ke
 const sqlAnd = (parts: any[]) => parts.length ? parts.reduce((a, x) => sql`${a} AND ${x}`) : sql`1 = 1`;
 
 export interface Account {
+  index?: number;
   id: string;
   quorum: number;
   roles: string[];
@@ -292,7 +293,7 @@ export class IrohaDb {
     `).then(byKeys('id', ids));
   }
 
-  private static makePagedList<T>(table: 'account' | 'peer' | 'role' | 'domain', fields: (keyof T)[]) {
+  private static makePagedList<T>(table: 'peer' | 'role' | 'domain', fields: (keyof T)[]) {
     return async function (this: IrohaDb, query: PagedQuery<number>) {
       const after = query.after || 0;
       const items = await this.pool.any<T>(sql`
@@ -355,7 +356,25 @@ export class IrohaDb {
     } as PagedList<Transaction, number>;
   }
 
-  public accountList = IrohaDb.makePagedList<Account>('account', ['id', 'quorum', 'roles', 'permissions_granted']);
+  public async accountList(query: PagedQuery<number> & { id?: string }) {
+    const after = (query.after === undefined || query.after === null) ? 0 : query.after;
+    const where = [];
+    where.push(sql`index > ${after}`);
+    if (query.id) {
+      where.push(sql`id ILIKE ${`%${query.id.replace(/[_%]/g, x => `\\${x}`)}%`}`);
+    }
+    const items = await this.pool.any<Account>(sql`
+      SELECT index, id, quorum, roles, permissions_granted FROM account
+      WHERE ${sqlAnd(where)}
+      ORDER BY index
+      LIMIT ${query.count}
+    `);
+    return {
+      items,
+      nextAfter: items.length ? last(items).index : after,
+    } as PagedList<Account, number>;
+  }
+
   public peerList = IrohaDb.makePagedList<Peer>('peer', ['address', 'public_key']);
   public roleList = IrohaDb.makePagedList<Role>('role', ['name', 'permissions']);
   public domainList = IrohaDb.makePagedList<Domain>('domain', ['id', 'default_role']);

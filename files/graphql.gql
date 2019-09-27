@@ -198,7 +198,7 @@ type Query {
   transactionList(after: Int, count: Int!, timeAfter: String, timeBefore: String, creatorId: String): TransactionList!
 
   # Chronological paginated list of accounts
-  accountList(after: Int, count: Int!): AccountList!
+  accountList(after: Int, count: Int!, id: String): AccountList!
 
   # Chronological paginated list of peers
   peerList(after: Int, count: Int!): PeerList!
