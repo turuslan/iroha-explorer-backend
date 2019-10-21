@@ -2,6 +2,7 @@
   "name": "iroha-explorer-backend",
   "private": true,
   "scripts": {
+    "start": "node out/start.js",
     "start:init": "node out/init.js",
     "start:sync": "node out/sync.js",
     "start:info": "node out/info.js",
