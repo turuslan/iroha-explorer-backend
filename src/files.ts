@@ -10,3 +10,5 @@ export const graphqlGql = read('files/graphql.gql');
 export const postgresSql = read('files/postgres.sql');
 
 export const docPath = resolve(root, 'doc');
+
+export const frontendPath = resolve(root, 'build');

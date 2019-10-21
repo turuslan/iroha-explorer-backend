@@ -44,7 +44,7 @@ Prints information from database to console.
     npm run start:info
 
 ## Start GraphQL server
-Go to http://localhost:4000 in browser to access GraphiQL IDE.
+Go to http://localhost:4000/graphql in browser to access GraphiQL IDE.
 Go to http://localhost:4000/doc to access static documentation pages.
 
     npm run start:server
