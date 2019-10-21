@@ -22,6 +22,12 @@ Integration of Hyperledger Iroha into Hyperledger Explorer tool
 
     npm run watch
 
+## Environment variables
+`IROHA_HOST`  
+`IROHA_ACCOUNT`  
+`IROHA_ACCOUNT_KEY`  
+`POSTGRES_HOST`  
+
 ## Start docker compose
 Run this command to start Postgres and Iroha.
 Iroha may exit unexpectedly when started first time because of Postgres initialization, in that case just repeat command.
