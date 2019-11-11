@@ -24,7 +24,7 @@ export function sync(api: IrohaApi, db: IrohaDb) {
 }
 
 export async function main() {
-  const api = new IrohaApi('localhost:50051', config.iroha.admin.accountId, config.iroha.admin.privateKey);
+  const api = new IrohaApi(config.iroha.host, config.iroha.admin.accountId, config.iroha.admin.privateKey);
   const db = new IrohaDb(createPool(config.postgres));
   await sync(api, db).promise;
 }
