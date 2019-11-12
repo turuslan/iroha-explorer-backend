@@ -8,4 +8,5 @@ export default {
     },
   },
   postgres: process.env.POSTGRES_HOST,
+  disableSync: process.env.DISABLE_SYNC === '1',
 };
