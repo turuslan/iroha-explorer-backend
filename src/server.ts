@@ -13,8 +13,14 @@ server.get('/graphql', (_, res) => res.end(graphiqlHtml));
 server.use('/doc', serveStatic(docPath));
 server.use('/', serveStatic(frontendPath));
 
-// tslint:disable-next-line:no-floating-promises
-server.start(
-  { endpoint: '/graphql', playground: false },
-  () => console.log(`Server is running on localhost:${server.options.port}`),
-);
+export async function main() {
+  await server.start(
+    { endpoint: '/graphql', playground: false },
+    () => console.log(`Server is running on localhost:${server.options.port}`),
+  );
+}
+
+if (module === require.main) {
+  // tslint:disable-next-line:no-floating-promises
+  main();
+}

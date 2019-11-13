@@ -1,8 +1,16 @@
 import config from './config';
-import './server';
+import * as server from './server';
 import * as sync from './sync';
 
-if (!config.disableSync) {
+async function main() {
   // tslint:disable-next-line:no-floating-promises
-  sync.main();
+  server.main();
+
+  if (!config.disableSync) {
+    // tslint:disable-next-line:no-floating-promises
+    sync.main();
+  }
 }
+
+// tslint:disable-next-line:no-floating-promises
+main();
