@@ -1,4 +1,5 @@
 import autobind from 'autobind-decorator';
+import { createHash } from 'crypto';
 import DataLoader = require('dataloader');
 import get from 'lodash/get';
 import keyBy from 'lodash/keyBy';
@@ -6,6 +7,7 @@ import last from 'lodash/last';
 import { DatabaseTransactionConnectionType, sql } from 'slonik';
 import { postgresSql as initSql } from './files';
 import { accountDomain, blockHeight, BlockProto, transactionHash, TransactionProto } from './iroha-api';
+import { logger } from './logger';
 
 type First<T> = { value: T };
 
@@ -88,8 +90,24 @@ export class IrohaDb {
   public roleLoader: DataLoader<string, Role>;
   public domainLoader: DataLoader<string, Domain>;
 
-  public static init(pool: DatabaseTransactionConnectionType) {
-    return pool.query(sql`${sql.raw(initSql)}`);
+  public static async init(pool: DatabaseTransactionConnectionType) {
+    const fileHash = createHash('md5').update(initSql).digest('hex');
+    const versionTableName = 'schema_version';
+    const versionTable = sql.raw(versionTableName);
+    try {
+      if (await pool.oneFirst(sql`SELECT to_regclass(${versionTableName}) IS NULL`)) {
+        await pool.query(sql`${sql.raw(initSql)}`);
+        await pool.query(sql`INSERT INTO ${versionTable} (hash) VALUES (${fileHash})`);
+      } else {
+        const dbHash = await pool.maybeOneFirst(sql`SELECT hash FROM ${versionTable}`);
+        if (dbHash !== fileHash) {
+          throw new Error(`IrohaDb.init: expected db schema version ${fileHash} but got ${dbHash}`);
+        }
+      }
+    } catch (error) {
+      logger.error('IrohaDb.init: please check that db is empty or recreate it');
+      throw error;
+    }
   }
 
   public constructor(

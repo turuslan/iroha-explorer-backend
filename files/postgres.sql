@@ -3,6 +3,10 @@ BEGIN;
 
 
 
+CREATE TABLE schema_version (hash TEXT);
+
+
+
 CREATE TABLE block (
   protobuf BYTEA NOT NULL,
   height BIGINT NOT NULL UNIQUE,
