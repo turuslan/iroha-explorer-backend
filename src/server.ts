@@ -1,3 +1,5 @@
+import { checkLogLevel, setLogLevel } from './logger';
+
 import { GraphQLServer } from 'graphql-yoga';
 import serveStatic from 'serve-static';
 import { createPool } from 'slonik';
@@ -12,6 +14,16 @@ const server = new GraphQLServer({ schema, context: db.fork });
 server.get('/graphql', (_, res) => res.end(graphiqlHtml));
 server.use('/doc', serveStatic(docPath));
 server.use('/', serveStatic(frontendPath));
+
+server.post('/logLevel', (req, res) => {
+  const { level } = req.query;
+  if (checkLogLevel(level)) {
+    setLogLevel(level);
+  } else {
+    res.statusCode = 400;
+  }
+  res.end();
+});
 
 export async function main() {
   await server.start(
