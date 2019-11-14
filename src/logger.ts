@@ -1,4 +1,5 @@
 import { createLogger, format, transports } from 'winston';
+import config from './config';
 
 declare module 'winston' {
   interface LoggerOptions {
@@ -35,3 +36,14 @@ logger.rejections.handle();
 if (require.resolve('ed25519.js') in require.cache) {
   throw new Error(`"${__filename}" must be imported before "ed25519.js"`);
 }
+
+export const checkLogLevel = level => /^(error|warn|info|debug)$/i.test(level);
+
+export function setLogLevel(level) {
+  if (!checkLogLevel(level)) {
+    throw new Error(`Unrecognized "LOG_LEVEL=${level}"`);
+  }
+  logger.level = level.toLowerCase();
+}
+
+setLogLevel(config.logLevel);

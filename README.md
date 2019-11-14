@@ -28,6 +28,7 @@ Integration of Hyperledger Iroha into Hyperledger Explorer tool
 `IROHA_ACCOUNT_KEY`  
 `POSTGRES_HOST`  
 `DISABLE_SYNC`  
+`LOG_LEVEL`  
 
 ## Start docker compose
 Run this command to start Postgres and Iroha.
