@@ -1,3 +1,5 @@
+import './logger';
+
 import config from './config';
 import * as server from './server';
 import * as sync from './sync';

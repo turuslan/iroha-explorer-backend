@@ -1,3 +1,5 @@
+import './logger';
+
 import { createPool } from 'slonik';
 import config from './config';
 import { IrohaDb } from './iroha-db';
