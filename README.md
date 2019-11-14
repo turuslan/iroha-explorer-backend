@@ -35,26 +35,11 @@ Iroha may exit unexpectedly when started first time because of Postgres initiali
 
     docker-compose -f docker/docker-compose up
 
-## Start db init script
-Run this command first time you start docker compose or if you dropped database.
-
-    npm run start:init
-
-## Start sync script
-Syncs blocks from Iroha to database.
-
-    npm run start:sync
-
-## Start info script
-Prints information from database to console.
-
-    npm run start:info
-
-## Start GraphQL server
+## Start sync service and GraphQL server
 Go to http://localhost:4000/graphql in browser to access GraphiQL IDE.
 Go to http://localhost:4000/doc to access static documentation pages.
 
-    npm run start:server
+    npm run start
 
 ## Drop Postgres and Iroha
 You can use this command to drop Postgres database and Iroha blockchain.
