@@ -4,7 +4,7 @@ import { createPool } from 'slonik';
 import config from './config';
 import { IrohaDb } from './iroha-db';
 
-async function main() {
+export async function main() {
   await IrohaDb.init(createPool(config.postgres));
 }
 
