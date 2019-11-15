@@ -28,6 +28,11 @@ server.post('/logLevel', (req, res) => {
 
 server.get('/prometheus', prometheus.httpHandler);
 
+server.get('/health', (req, res) => {
+  res.setHeader('Content-Type', 'application/json');
+  res.json({ status: 'UP' });
+});
+
 export async function main() {
   const http = await server.start(
     { endpoint: '/graphql', playground: false },
