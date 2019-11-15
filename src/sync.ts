@@ -1,7 +1,8 @@
 import { createPool } from 'slonik';
 import config from './config';
-import { IrohaApi } from './iroha-api';
+import { blockHeight, IrohaApi } from './iroha-api';
 import { IrohaDb } from './iroha-db';
+import { logger } from './logger';
 import * as prometheus from './prometheus';
 
 export function sync(api: IrohaApi, db: IrohaDb) {
@@ -13,6 +14,7 @@ export function sync(api: IrohaApi, db: IrohaDb) {
         return;
       }
       stream = api.streamBlocks(blockCount + 1, async (block) => {
+        logger.info(`sync block ${blockHeight(block)}`);
         await db.applyBlock(block);
         await prometheus.readFromDb(db);
       });
