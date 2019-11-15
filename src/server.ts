@@ -29,10 +29,11 @@ server.post('/logLevel', (req, res) => {
 server.get('/prometheus', prometheus.httpHandler);
 
 export async function main() {
-  await server.start(
+  const http = await server.start(
     { endpoint: '/graphql', playground: false },
     () => console.log(`Server is running on localhost:${server.options.port}`),
   );
+  process.once('SIGTERM', () => http.close());
 }
 
 if (module === require.main) {
