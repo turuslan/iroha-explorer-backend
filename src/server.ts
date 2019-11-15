@@ -1,4 +1,4 @@
-import { checkLogLevel, setLogLevel } from './logger';
+import { checkLogLevel, logger , setLogLevel } from './logger';
 
 import { GraphQLServer } from 'graphql-yoga';
 import serveStatic from 'serve-static';
@@ -31,7 +31,7 @@ server.get('/prometheus', prometheus.httpHandler);
 export async function main() {
   const http = await server.start(
     { endpoint: '/graphql', playground: false },
-    () => console.log(`Server is running on localhost:${server.options.port}`),
+    () => logger.info(`Server is running on localhost:${server.options.port}`),
   );
   process.once('SIGTERM', () => http.close());
 }
