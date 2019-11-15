@@ -1,4 +1,4 @@
-FROM hyperledger/iroha:1.0.0_rc4-hotfix1
+FROM hyperledger/iroha:1.1.1
 
 EXPOSE 50051
 
