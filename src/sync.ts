@@ -2,6 +2,7 @@ import { createPool } from 'slonik';
 import config from './config';
 import { IrohaApi } from './iroha-api';
 import { IrohaDb } from './iroha-db';
+import * as prometheus from './prometheus';
 
 export function sync(api: IrohaApi, db: IrohaDb) {
   let end = false;
@@ -11,7 +12,10 @@ export function sync(api: IrohaApi, db: IrohaDb) {
       if (end) {
         return;
       }
-      stream = api.streamBlocks(blockCount + 1, block => db.applyBlock(block));
+      stream = api.streamBlocks(blockCount + 1, async (block) => {
+        await db.applyBlock(block);
+        await prometheus.readFromDb(db);
+      });
       return stream.promise;
     }),
     end() {

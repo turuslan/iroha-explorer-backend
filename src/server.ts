@@ -7,6 +7,7 @@ import config from './config';
 import { docPath, frontendPath, graphiqlHtml } from './files';
 import { schema } from './graphql';
 import { IrohaDb } from './iroha-db';
+import * as prometheus from './prometheus';
 
 const db = new IrohaDb(createPool(config.postgres));
 
@@ -24,6 +25,8 @@ server.post('/logLevel', (req, res) => {
   }
   res.end();
 });
+
+server.get('/prometheus', prometheus.httpHandler);
 
 export async function main() {
   await server.start(

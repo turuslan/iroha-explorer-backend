@@ -40,6 +40,7 @@
     "grpc": "^1.21.1",
     "iroha-helpers": "^0.6.19",
     "lodash": "^4.17.15",
+    "prom-client": "^11.5.3",
     "slonik": "^16.19.6",
     "tslib": "^1.10.0",
     "wait-on": "^3.2.0",
