@@ -149,7 +149,7 @@ export class IrohaDb {
       let domainIndex = await db.domainCount();
 
       for (const transaction of blockTransactions) {
-        const creatorId = transaction.getPayload().getReducedPayload().getCreatorAccountId();
+        const creatorId = transaction.getPayload().getReducedPayload().getCreatorAccountId() || null;
 
         transactionIndex += 1;
         await pool.query(sql`
@@ -158,7 +158,7 @@ export class IrohaDb {
             ${transactionIndex},
             ${transactionHash(transaction)},
             ${creatorId},
-            ${accountDomain(creatorId)},
+            ${creatorId && accountDomain(creatorId)},
             ${blockHeight(block)},
             ${blockTime}
           )

@@ -20,7 +20,10 @@ export const schema = makeExecutableSchema<IrohaDb>({
     },
     Transaction: {
       hash: (transaction: Transaction) => transactionHash(transaction.protobuf),
-      createdBy: (transaction: Transaction, {}, { accountLoader }) => accountLoader.load(transaction.protobuf.getPayload().getReducedPayload().getCreatorAccountId()),
+      createdBy: (transaction: Transaction, {}, { accountLoader }) => {
+        const creatorId = transaction.protobuf.getPayload().getReducedPayload().getCreatorAccountId();
+        return creatorId && accountLoader.load(creatorId);
+      },
       blockHeight: (transaction: Transaction) => transaction.block_height,
       signatories: (transaction: Transaction) => transaction.protobuf.getSignaturesList().map(signature => signature.getPublicKey()),
       commandsJson: (transaction: Transaction) => JSON.stringify(transaction.protobuf.getPayload().getReducedPayload().toObject().commandsList),

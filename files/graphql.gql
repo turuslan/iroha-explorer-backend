@@ -35,7 +35,7 @@ type Transaction {
   hash: String!
 
   # Transaction creator account
-  createdBy: Account!
+  createdBy: Account
 
   # Transaction commit time
   time: String!
