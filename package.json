@@ -37,7 +37,7 @@
     "dataloader": "^1.4.0",
     "delay": "^4.3.0",
     "graphql-yoga": "^1.18.0",
-    "grpc": "^1.21.1",
+    "grpc": "^1.24.9",
     "iroha-helpers": "^0.6.19",
     "lodash": "^4.17.15",
     "prom-client": "^11.5.3",
